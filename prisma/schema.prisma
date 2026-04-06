@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Rol {
+  ADMIN
+  CHOFER
+  CLIENTE
+}
+
+enum EstadoRuta {
+  PENDIENTE
+  EN_CURSO
+  COMPLETADA
+  CANCELADA
+}
+
+enum EstadoGuia {
+  PENDIENTE
+  ENTREGADO
+  INCIDENCIA
+}
+
+enum TipoNovedad {
+  DIRECCION_INCORRECTA
+  CLIENTE_AUSENTE
+  MERCADERIA_DANADA
+  OTRO
+}
+
+enum TipoFoto {
+  GUIA
+  HOJA_RUTA
+}
+
+model Cliente {
+  id               String    @id @default(cuid())
+  nombre           String
+  ruc              String    @unique
+  direccion        String
+  telefonoContacto String?
+  emailContacto    String?
+  activo           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  usuarios         Usuario[]
+  stops            Stop[]
+  guias            GuiaEntrega[]
+}
+
+model Usuario {
+  id         String   @id @default(cuid())
+  nombre     String
+  cedula     String?  @unique
+  email      String   @unique
+  password   String
+  rol        Rol
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  clienteId  String?
+  cliente    Cliente? @relation(fields: [clienteId], references: [id])
+
+  rutas      Ruta[]
+}
+
+model Ruta {
+  id        String     @id @default(cuid())
+  fecha     String
+  estado    EstadoRuta @default(PENDIENTE)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  choferId  String
+  chofer    Usuario    @relation(fields: [choferId], references: [id])
+
+  stops     Stop[]
+  guias     GuiaEntrega[]
+  fotos     Foto[]
+}
+
+model Stop {
+  id        String   @id @default(cuid())
+  orden     Int
+  direccion String
+  lat       Float
+  lng       Float
+  notas     String?
+  createdAt DateTime @default(now())
+
+  rutaId    String
+  ruta      Ruta     @relation(fields: [rutaId], references: [id], onDelete: Cascade)
+
+  clienteId String
+  cliente   Cliente  @relation(fields: [clienteId], references: [id])
+
+  guias     GuiaEntrega[]
+}
+
+model GuiaEntrega {
+  id            String     @id @default(cuid())
+  numeroGuia    String     @unique
+  descripcion   String
+  estado        EstadoGuia @default(PENDIENTE)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  // Datos de entrega registrados por el chofer
+  receptorNombre String?
+  horaLlegada    String?
+  horaSalida     String?
+  temperatura    String?
+  observaciones  String?
+
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id])
+
+  rutaId    String
+  ruta      Ruta    @relation(fields: [rutaId], references: [id], onDelete: Cascade)
+
+  stopId    String
+  stop      Stop    @relation(fields: [stopId], references: [id])
+
+  fotos     Foto[]
+  novedades Novedad[]
+}
+
+model Foto {
+  id        String   @id @default(cuid())
+  tipo      TipoFoto
+  urlPreview String
+  publicId  String?  // Cloudinary public_id para poder eliminar
+  createdAt DateTime @default(now())
+
+  guiaId    String?
+  guia      GuiaEntrega? @relation(fields: [guiaId], references: [id], onDelete: Cascade)
+
+  rutaId    String?
+  ruta      Ruta?        @relation(fields: [rutaId], references: [id], onDelete: Cascade)
+}
+
+model Novedad {
+  id          String      @id @default(cuid())
+  tipo        TipoNovedad
+  descripcion String
+  createdAt   DateTime    @default(now())
+
+  guiaId      String
+  guia        GuiaEntrega @relation(fields: [guiaId], references: [id], onDelete: Cascade)
+
+  seguimientos SeguimientoNovedad[]
+}
+
+model SeguimientoNovedad {
+  id        String   @id @default(cuid())
+  nota      String
+  createdAt DateTime @default(now())
+
+  novedadId String
+  novedad   Novedad  @relation(fields: [novedadId], references: [id], onDelete: Cascade)
+}
