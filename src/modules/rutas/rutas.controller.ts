@@ -2,8 +2,11 @@ import { Request, Response, NextFunction } from 'express'
 import { createRutaSchema, updateEstadoSchema, assignChoferSchema } from './rutas.schema'
 import * as svc from './rutas.service'
 
-export const getAll = async (_req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await svc.getAll()) } catch (e) { next(e) }
+export const getAll = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { choferId, fecha, estado } = req.query as Record<string, string>
+    res.json(await svc.getAll({ choferId, fecha, estado: estado as any }))
+  } catch (e) { next(e) }
 }
 
 export const getById = async (req: Request, res: Response, next: NextFunction) => {

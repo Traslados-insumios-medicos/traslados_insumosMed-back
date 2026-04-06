@@ -1,5 +1,6 @@
 import { prisma } from '../../config/prisma'
 import { CreateRutaDto, UpdateEstadoDto } from './rutas.schema'
+import { EstadoRuta } from '@prisma/client'
 
 const rutaInclude = {
   chofer: { select: { id: true, nombre: true } },
@@ -7,24 +8,49 @@ const rutaInclude = {
     orderBy: { orden: 'asc' as const },
     include: {
       cliente: { select: { id: true, nombre: true } },
-      guias: true,
+      guias: {
+        include: {
+          fotos: true,
+          novedades: { include: { seguimientos: true } },
+        },
+      },
     },
   },
   guias: true,
   fotos: { where: { tipo: 'HOJA_RUTA' as const } },
 }
 
-export const getAll = () =>
-  prisma.ruta.findMany({ include: rutaInclude, orderBy: { createdAt: 'desc' } })
+interface GetAllFilters {
+  choferId?: string
+  fecha?: string
+  estado?: EstadoRuta
+}
+
+export const getAll = (filters: GetAllFilters = {}) => {
+  const where: Record<string, unknown> = {}
+  if (filters.choferId) where.choferId = filters.choferId
+  if (filters.fecha) where.fecha = filters.fecha
+  if (filters.estado) where.estado = filters.estado
+
+  return prisma.ruta.findMany({
+    where,
+    include: rutaInclude,
+    orderBy: { createdAt: 'desc' },
+  })
+}
 
 export const getById = (id: string) =>
   prisma.ruta.findUniqueOrThrow({ where: { id }, include: rutaInclude })
 
+/** Rutas del chofer autenticado — ordenadas por fecha desc */
 export const getByChofer = (choferId: string) =>
-  prisma.ruta.findMany({ where: { choferId }, include: rutaInclude, orderBy: { fecha: 'desc' } })
+  prisma.ruta.findMany({
+    where: { choferId },
+    include: rutaInclude,
+    orderBy: { fecha: 'desc' },
+  })
 
 export const create = async (dto: CreateRutaDto) => {
-  // Genera un número de guía secuencial por stop
   const count = await prisma.guiaEntrega.count()
 
   return prisma.ruta.create({
