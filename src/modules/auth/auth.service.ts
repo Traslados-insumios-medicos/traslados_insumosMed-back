@@ -1,5 +1,7 @@
 /**
- * @deprecated Usar authUseCases desde infrastructure/auth.container.ts
- * Mantenido por compatibilidad. La lógica real está en application/auth.use-cases.ts
+ * Public API for the auth module.
+ * Re-exports the use-cases instance and the generarPasswordTemporal utility
+ * so it can be imported and tested independently.
  */
 export { authUseCases as authService } from './infrastructure/auth.container'
+export { generarPasswordTemporal } from './application/auth.use-cases'

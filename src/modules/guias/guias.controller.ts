@@ -3,7 +3,7 @@ import { updateEstadoSchema, updateDetalleSchema } from './guias.schema'
 import * as svc from './guias.service'
 
 export const getById = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await svc.getById(req.params.id)) } catch (e) { next(e) }
+  try { res.json(await svc.getById(req.params.id as string)) } catch (e) { next(e) }
 }
 
 export const getMisEnvios = async (req: Request, res: Response, next: NextFunction) => {
@@ -17,13 +17,13 @@ export const getMisEnvios = async (req: Request, res: Response, next: NextFuncti
 export const updateEstado = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const dto = updateEstadoSchema.parse(req.body)
-    res.json(await svc.updateEstado(req.params.id, dto))
+    res.json(await svc.updateEstado(req.params.id as string, dto))
   } catch (e) { next(e) }
 }
 
 export const updateDetalle = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const dto = updateDetalleSchema.parse(req.body)
-    res.json(await svc.updateDetalle(req.params.id, dto))
+    res.json(await svc.updateDetalle(req.params.id as string, dto))
   } catch (e) { next(e) }
 }

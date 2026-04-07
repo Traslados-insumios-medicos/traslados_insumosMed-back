@@ -1,12 +1,16 @@
 import { Request, Response, NextFunction } from 'express'
-import { createUsuarioSchema, updateUsuarioSchema } from './usuarios.schema'
+import { registerSchema } from '../auth/auth.schema'
+import { updateUsuarioSchema } from './usuarios.schema'
 import * as svc from './usuarios.service'
+import { authUseCases } from '../auth/infrastructure/auth.container'
 import { Rol } from '@prisma/client'
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const rol = req.query.rol as Rol | undefined
-    res.json(await svc.getAll(rol))
+    const page = Math.max(1, parseInt(req.query.page as string) || 1)
+    const limit = Math.max(1, parseInt(req.query.limit as string) || 20)
+    res.json(await svc.getAll(rol, page, limit))
   } catch (e) { next(e) }
 }
 
@@ -16,8 +20,9 @@ export const getById = async (req: Request, res: Response, next: NextFunction) =
 
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const dto = createUsuarioSchema.parse(req.body)
-    res.status(201).json(await svc.create(dto))
+    const dto = registerSchema.parse(req.body)
+    const result = await authUseCases.register(dto)
+    res.status(201).json(result)
   } catch (e) { next(e) }
 }
 
