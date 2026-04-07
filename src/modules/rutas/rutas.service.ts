@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma'
 import { AppError } from '../../utils/app-error'
 import { CreateRutaDto, UpdateEstadoDto } from './rutas.schema'
+import { EstadoRuta } from '@prisma/client'
 
 const rutaInclude = {
   chofer: { select: { id: true, nombre: true, cedula: true } },
