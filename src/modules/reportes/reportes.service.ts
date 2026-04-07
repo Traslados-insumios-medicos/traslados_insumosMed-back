@@ -1,5 +1,51 @@
 import { prisma } from '../../config/prisma'
 
+export async function dashboard() {
+  const [enviosActivos, rutasEnCurso, entregasCompletadas, novedadesCount, ultimasRutas, ultimasNovedades] =
+    await Promise.all([
+      prisma.guiaEntrega.count({ where: { ruta: { estado: { in: ['PENDIENTE', 'EN_CURSO'] } } } }),
+      prisma.ruta.count({ where: { estado: 'EN_CURSO' } }),
+      prisma.guiaEntrega.count({ where: { estado: 'ENTREGADO' } }),
+      prisma.novedad.count(),
+      prisma.ruta.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          chofer: { select: { id: true, nombre: true } },
+          guias: { select: { id: true, estado: true } },
+          stops: { select: { id: true, orden: true, direccion: true }, orderBy: { orden: 'asc' }, take: 1 },
+        },
+      }),
+      prisma.novedad.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: { guia: { select: { numeroGuia: true, clienteId: true } } },
+      }),
+    ])
+
+  return {
+    enviosActivos,
+    rutasEnCurso,
+    entregasCompletadas,
+    novedadesCount,
+    ultimasRutas: ultimasRutas.map((r) => {
+      const total = r.guias.length
+      const entregadas = r.guias.filter((g) => g.estado === 'ENTREGADO').length
+      const incidencias = r.guias.filter((g) => g.estado === 'INCIDENCIA').length
+      return {
+        id: r.id,
+        fecha: r.fecha,
+        estado: r.estado,
+        chofer: r.chofer,
+        progreso: total ? Math.round(((entregadas + incidencias) / total) * 100) : 0,
+        totalGuias: total,
+        primerDestino: r.stops[0]?.direccion ?? '—',
+      }
+    }),
+    ultimasNovedades,
+  }
+}
+
 export async function reportePorCliente() {
   const clientes = await prisma.cliente.findMany({
     include: {

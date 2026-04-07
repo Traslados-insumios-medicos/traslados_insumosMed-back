@@ -15,7 +15,7 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
 }
 
 export const getById = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await svc.getById(req.params.id)) } catch (e) { next(e) }
+  try { res.json(await svc.getById(req.params.id as string)) } catch (e) { next(e) }
 }
 
 export const create = async (req: Request, res: Response, next: NextFunction) => {
@@ -29,10 +29,10 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
 export const update = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const dto = updateUsuarioSchema.parse(req.body)
-    res.json(await svc.update(req.params.id, dto))
+    res.json(await svc.update(req.params.id as string, dto))
   } catch (e) { next(e) }
 }
 
 export const toggleActivo = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await svc.toggleActivo(req.params.id)) } catch (e) { next(e) }
+  try { res.json(await svc.toggleActivo(req.params.id as string)) } catch (e) { next(e) }
 }

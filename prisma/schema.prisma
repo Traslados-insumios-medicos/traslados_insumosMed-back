@@ -37,16 +37,27 @@ enum TipoFoto {
   HOJA_RUTA
 }
 
+enum TipoCliente {
+  PRINCIPAL
+  SECUNDARIO
+}
+
 model Cliente {
-  id               String    @id @default(cuid())
+  id               String      @id @default(cuid())
   nombre           String
-  ruc              String    @unique
+  ruc              String      @unique
   direccion        String
   telefonoContacto String?
   emailContacto    String?
-  activo           Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  activo           Boolean     @default(true)
+  tipo             TipoCliente @default(SECUNDARIO)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relación jerárquica: un SECUNDARIO pertenece a un PRINCIPAL
+  clientePrincipalId String?
+  clientePrincipal   Cliente?  @relation("ClienteJerarquia", fields: [clientePrincipalId], references: [id])
+  clientesSecundarios Cliente[] @relation("ClienteJerarquia")
 
   usuarios         Usuario[]
   stops            Stop[]
