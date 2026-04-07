@@ -86,7 +86,6 @@ async function main() {
   })
   console.log('[OK] Usuario cliente:', clienteUser.email, '/ contraseña: Medlogix1234!')
 
-<<<<<<< Updated upstream
   // Limpiar rutas y dependencias previas para evitar duplicados en sucesivos seeds
   await prisma.novedad.deleteMany({})
   await prisma.foto.deleteMany({})
@@ -152,9 +151,6 @@ async function main() {
   console.log('✅ Ruta realista múltiple creada para Chofer:', chofer.nombre, '- ID Ruta:', rutaRealista.id)
 
   console.log('\n🎉 Seed completado. ¡Datos reales en Quito insertados!')
-=======
-  console.log('\n[OK] Seed completado')
->>>>>>> Stashed changes
   console.log('─────────────────────────────')
   console.log('Admin    → admin@medlogix.ec    / Admin1234!')
   console.log('Chofer   → chofer@medlogix.ec   / Medlogix1234!')
