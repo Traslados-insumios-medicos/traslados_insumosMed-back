@@ -1,18 +1,24 @@
 import { z } from 'zod'
 
+const guiaInputSchema = z.object({
+  descripcion: z.string().min(1),
+})
+
 const stopInputSchema = z.object({
   orden: z.number().int().positive(),
   direccion: z.string().min(1),
-  lat: z.number(),
-  lng: z.number(),
-  clienteId: z.string(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  clienteId: z.string().min(1),
   notas: z.string().optional(),
+  // Support both formats: array of guias (design spec) or single guiaDescripcion (legacy)
+  guias: z.array(guiaInputSchema).optional(),
   guiaDescripcion: z.string().optional(),
 })
 
 export const createRutaSchema = z.object({
-  fecha: z.string(),
-  choferId: z.string(),
+  fecha: z.string().min(1),
+  choferId: z.string().min(1),
   stops: z.array(stopInputSchema).min(1),
 })
 
@@ -21,7 +27,7 @@ export const updateEstadoSchema = z.object({
 })
 
 export const assignChoferSchema = z.object({
-  choferId: z.string(),
+  choferId: z.string().min(1),
 })
 
 export type CreateRutaDto = z.infer<typeof createRutaSchema>

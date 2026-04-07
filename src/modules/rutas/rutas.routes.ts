@@ -6,8 +6,8 @@ const router = Router()
 
 router.use(authenticate)
 
-router.get('/', authorize('ADMIN'), ctrl.getAll)
-router.get('/mis-rutas', authorize('CHOFER'), ctrl.getMisRutas)
+// GET /api/rutas — ADMIN sees all (with filters), CHOFER sees only their own
+router.get('/', authorize('ADMIN', 'CHOFER'), ctrl.getAll)
 router.get('/:id', authorize('ADMIN', 'CHOFER'), ctrl.getById)
 router.post('/', authorize('ADMIN'), ctrl.create)
 router.patch('/:id/estado', authorize('ADMIN', 'CHOFER'), ctrl.updateEstado)

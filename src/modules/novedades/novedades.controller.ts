@@ -7,11 +7,11 @@ export const getAll = async (_req: Request, res: Response, next: NextFunction) =
 }
 
 export const getById = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await svc.getById(req.params.id)) } catch (e) { next(e) }
+  try { res.json(await svc.getById(req.params.id as string)) } catch (e) { next(e) }
 }
 
 export const getByGuia = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await svc.getByGuia(req.params.guiaId)) } catch (e) { next(e) }
+  try { res.json(await svc.getByGuia(req.params.guiaId as string)) } catch (e) { next(e) }
 }
 
 export const create = async (req: Request, res: Response, next: NextFunction) => {
@@ -24,6 +24,6 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
 export const addSeguimiento = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const dto = createSeguimientoSchema.parse(req.body)
-    res.status(201).json(await svc.addSeguimiento(req.params.id, dto))
+    res.status(201).json(await svc.addSeguimiento(req.params.id as string, dto))
   } catch (e) { next(e) }
 }
