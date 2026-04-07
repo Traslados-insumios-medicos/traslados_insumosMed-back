@@ -1,6 +1,10 @@
 import { Request, Response, NextFunction } from 'express'
 import * as svc from './reportes.service'
 
+export const getDashboard = async (_req: Request, res: Response, next: NextFunction) => {
+  try { res.json(await svc.dashboard()) } catch (e) { next(e) }
+}
+
 export const porCliente = async (_req: Request, res: Response, next: NextFunction) => {
   try { res.json(await svc.reportePorCliente()) } catch (e) { next(e) }
 }

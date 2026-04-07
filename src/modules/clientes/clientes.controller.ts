@@ -6,7 +6,8 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1)
     const limit = Math.max(1, parseInt(req.query.limit as string) || 20)
-    res.json(await svc.getAll(page, limit))
+    const tipo = req.query.tipo as 'PRINCIPAL' | 'SECUNDARIO' | undefined
+    res.json(await svc.getAll(page, limit, tipo))
   } catch (e) { next(e) }
 }
 
