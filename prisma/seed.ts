@@ -49,7 +49,6 @@ async function main() {
       direccion: 'Av. Amazonas N39-123, Quito',
       telefonoContacto: '+593 2 123 4567',
       emailContacto: 'logistica@cimed.ec',
-      tipo: 'PRINCIPAL',
       activo: true,
     },
   })
@@ -65,8 +64,6 @@ async function main() {
       direccion: 'Av. 10 de Agosto N25-45, Quito',
       telefonoContacto: '+593 2 234 5678',
       emailContacto: 'bodega@metrored.ec',
-      tipo: 'SECUNDARIO',
-      clientePrincipalId: clientePrincipal.id,
       activo: true,
     },
   })
@@ -89,7 +86,71 @@ async function main() {
   })
   console.log('✅ Usuario cliente:', clienteUser.email, '/ contraseña: Medlogix1234!')
 
-  console.log('\n🎉 Seed completado!')
+  // Limpiar rutas y dependencias previas para evitar duplicados en sucesivos seeds
+  await prisma.novedad.deleteMany({})
+  await prisma.foto.deleteMany({})
+  await prisma.guiaEntrega.deleteMany({})
+  await prisma.stop.deleteMany({})
+  await prisma.ruta.deleteMany({})
+  await prisma.cliente.deleteMany({ where: { ruc: { in: ['1791234560003', '1791234560004'] } } })
+
+  // Nuevos Clientes Reales en Quito
+  const clinicaPichincha = await prisma.cliente.create({
+    data: {
+      nombre: 'Clínica Pichincha',
+      ruc: '1791234560003',
+      direccion: 'Calle Veintimilla E4-66 y Paez, Quito',
+      telefonoContacto: '+593 2 256 2296',
+      activo: true,
+    }
+  })
+
+  const hMetropolitano = await prisma.cliente.create({
+    data: {
+      nombre: 'Hospital Metropolitano',
+      ruc: '1791234560004',
+      direccion: 'Av. Mariana de Jesús y Nicolás Arteta, Quito',
+      telefonoContacto: '+593 2 399 8000',
+      activo: true,
+    }
+  })
+
+  // Crear Ruta de prueba realista para Carlos (Chofer)
+  const fechaHoy = new Date().toISOString().split('T')[0]
+  const rutaRealista = await prisma.ruta.create({
+    data: {
+      fecha: fechaHoy,
+      choferId: chofer.id,
+      estado: 'PENDIENTE',
+    }
+  })
+
+  // Parada 1
+  const stop1 = await prisma.stop.create({
+    data: { orden: 1, direccion: clienteSecundario.direccion, lat: -0.180653, lng: -78.467834, clienteId: clienteSecundario.id, rutaId: rutaRealista.id, notas: 'Acceso por puerta posterior (bodega)' }
+  })
+  await prisma.guiaEntrega.create({ data: { numeroGuia: 'G-10001', descripcion: 'Insumos Quirúrgicos - Cajas x5', estado: 'PENDIENTE', clienteId: clienteSecundario.id, rutaId: rutaRealista.id, stopId: stop1.id } })
+
+  // Parada 2
+  const stop2 = await prisma.stop.create({
+    data: { orden: 2, direccion: clinicaPichincha.direccion, lat: -0.2013, lng: -78.4947, clienteId: clinicaPichincha.id, rutaId: rutaRealista.id, notas: 'Entrega urgente en Recepción Médica' }
+  })
+  await prisma.guiaEntrega.create({ data: { numeroGuia: 'G-10002', descripcion: 'Material Desechable - Guantes y Mascarillas', estado: 'PENDIENTE', clienteId: clinicaPichincha.id, rutaId: rutaRealista.id, stopId: stop2.id } })
+
+  // Parada 3
+  const stop3 = await prisma.stop.create({
+    data: { orden: 3, direccion: hMetropolitano.direccion, lat: -0.1878, lng: -78.4984, clienteId: hMetropolitano.id, rutaId: rutaRealista.id, notas: 'Hablar con el encargado general logístico' }
+  })
+  await prisma.guiaEntrega.createMany({
+    data: [
+      { numeroGuia: 'G-10003', descripcion: 'Equipos de monitoreo vital', estado: 'PENDIENTE', clienteId: hMetropolitano.id, rutaId: rutaRealista.id, stopId: stop3.id },
+      { numeroGuia: 'G-10004', descripcion: 'Medicamentos Especializados x10', estado: 'PENDIENTE', clienteId: hMetropolitano.id, rutaId: rutaRealista.id, stopId: stop3.id }
+    ]
+  })
+
+  console.log('✅ Ruta realista múltiple creada para Chofer:', chofer.nombre, '- ID Ruta:', rutaRealista.id)
+
+  console.log('\n🎉 Seed completado. ¡Datos reales en Quito insertados!')
   console.log('─────────────────────────────')
   console.log('Admin    → admin@medlogix.ec    / Admin1234!')
   console.log('Chofer   → chofer@medlogix.ec   / Medlogix1234!')

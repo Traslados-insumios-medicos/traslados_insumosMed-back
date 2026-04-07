@@ -16,7 +16,10 @@ import reportesRoutes from './modules/reportes/reportes.routes'
 const app = express()
 
 // Middlewares globales
-app.use(cors({ origin: env.FRONTEND_URL, credentials: true }))
+app.use(cors({ 
+  origin: env.NODE_ENV === 'development' ? true : env.FRONTEND_URL, 
+  credentials: true 
+}))
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
