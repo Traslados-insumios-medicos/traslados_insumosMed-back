@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import { createRutaSchema, updateEstadoSchema, assignChoferSchema } from './rutas.schema'
+import * as guiasSvc from '../guias/guias.service'
 import * as svc from './rutas.service'
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
@@ -23,13 +24,27 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
 export const getById = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const ruta = await svc.getById(req.params.id as string)
-    // CHOFER can only see their own routes
     if (req.user?.rol === 'CHOFER' && ruta.choferId !== req.user.userId) {
       res.status(403).json({ message: 'No tiene permisos para ver esta ruta' })
       return
     }
+    if (req.user?.rol === 'CLIENTE') {
+      const cid = req.user.clienteId
+      if (!cid) {
+        res.status(403).json({ message: 'Sin cliente asociado' })
+        return
+      }
+      const ids = await guiasSvc.resolveAlcanceClienteIds(cid)
+      const puede = ruta.guias.some((g) => ids.includes(g.clienteId))
+      if (!puede) {
+        res.status(403).json({ message: 'No tiene permisos para ver esta ruta' })
+        return
+      }
+    }
     res.json(ruta)
-  } catch (e) { next(e) }
+  } catch (e) {
+    next(e)
+  }
 }
 
 export const create = async (req: Request, res: Response, next: NextFunction) => {

@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs'
 const prisma = new PrismaClient()
 
 async function main() {
-  console.log('🌱 Seeding...')
+  console.log('[INFO] Seeding...')
 
   // Admin
   const adminPassword = await bcrypt.hash('Admin1234!', 10)
@@ -20,7 +20,7 @@ async function main() {
       activo: true,
     },
   })
-  console.log('✅ Admin:', admin.email, '/ contraseña: Admin1234!')
+  console.log('[OK] Admin:', admin.email, '/ contraseña: Admin1234!')
 
   // Chofer de prueba
   const choferPassword = await bcrypt.hash('Medlogix1234!', 10)
@@ -37,7 +37,7 @@ async function main() {
       activo: true,
     },
   })
-  console.log('✅ Chofer:', chofer.email, '/ contraseña: Medlogix1234!')
+  console.log('[OK] Chofer:', chofer.email, '/ contraseña: Medlogix1234!')
 
   // Cliente principal de prueba
   const clientePrincipal = await prisma.cliente.upsert({
@@ -52,7 +52,7 @@ async function main() {
       activo: true,
     },
   })
-  console.log('✅ Cliente principal:', clientePrincipal.nombre)
+  console.log('[OK] Cliente principal:', clientePrincipal.nombre)
 
   // Cliente secundario (punto de entrega)
   const clienteSecundario = await prisma.cliente.upsert({
@@ -67,7 +67,7 @@ async function main() {
       activo: true,
     },
   })
-  console.log('✅ Cliente secundario:', clienteSecundario.nombre)
+  console.log('[OK] Cliente secundario:', clienteSecundario.nombre)
 
   // Usuario cliente (acceso al panel del cliente principal)
   const clienteUserPassword = await bcrypt.hash('Medlogix1234!', 10)
@@ -84,8 +84,9 @@ async function main() {
       activo: true,
     },
   })
-  console.log('✅ Usuario cliente:', clienteUser.email, '/ contraseña: Medlogix1234!')
+  console.log('[OK] Usuario cliente:', clienteUser.email, '/ contraseña: Medlogix1234!')
 
+<<<<<<< Updated upstream
   // Limpiar rutas y dependencias previas para evitar duplicados en sucesivos seeds
   await prisma.novedad.deleteMany({})
   await prisma.foto.deleteMany({})
@@ -151,6 +152,9 @@ async function main() {
   console.log('✅ Ruta realista múltiple creada para Chofer:', chofer.nombre, '- ID Ruta:', rutaRealista.id)
 
   console.log('\n🎉 Seed completado. ¡Datos reales en Quito insertados!')
+=======
+  console.log('\n[OK] Seed completado')
+>>>>>>> Stashed changes
   console.log('─────────────────────────────')
   console.log('Admin    → admin@medlogix.ec    / Admin1234!')
   console.log('Chofer   → chofer@medlogix.ec   / Medlogix1234!')

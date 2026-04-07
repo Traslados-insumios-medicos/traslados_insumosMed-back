@@ -9,12 +9,12 @@ initWebSocket(httpServer)
 
 async function main() {
   await prisma.$connect()
-  console.log('✅ Base de datos conectada')
+  console.log('[OK] Base de datos conectada')
 
   httpServer.listen(env.PORT, () => {
-    console.log(`🚀 Servidor corriendo en http://localhost:${env.PORT}`)
-    console.log(`📦 Entorno: ${env.NODE_ENV}`)
-    console.log(`🔌 WebSocket activo`)
+    console.log(`[OK] Servidor corriendo en http://localhost:${env.PORT}`)
+    console.log(`[INFO] Entorno: ${env.NODE_ENV}`)
+    console.log(`[OK] WebSocket activo`)
   })
 }
 

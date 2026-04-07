@@ -8,7 +8,7 @@ router.use(authenticate)
 
 // GET /api/rutas — ADMIN sees all (with filters), CHOFER sees only their own
 router.get('/', authorize('ADMIN', 'CHOFER'), ctrl.getAll)
-router.get('/:id', authorize('ADMIN', 'CHOFER'), ctrl.getById)
+router.get('/:id', authorize('ADMIN', 'CHOFER', 'CLIENTE'), ctrl.getById)
 router.post('/', authorize('ADMIN'), ctrl.create)
 router.patch('/:id/estado', authorize('ADMIN', 'CHOFER'), ctrl.updateEstado)
 router.patch('/:id/asignar-chofer', authorize('ADMIN'), ctrl.assignChofer)
