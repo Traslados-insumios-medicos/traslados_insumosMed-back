@@ -8,7 +8,7 @@ export const uploadToGuia = async (req: Request, res: Response, next: NextFuncti
     const foto = await svc.uploadFoto({
       buffer: req.file.buffer,
       tipo: 'GUIA' as TipoFoto,
-      guiaId: req.params.guiaId,
+      guiaId: req.params.guiaId as string,
     })
     res.status(201).json(foto)
   } catch (e) { next(e) }
@@ -20,7 +20,7 @@ export const uploadToRuta = async (req: Request, res: Response, next: NextFuncti
     const foto = await svc.uploadFoto({
       buffer: req.file.buffer,
       tipo: 'HOJA_RUTA' as TipoFoto,
-      rutaId: req.params.rutaId,
+      rutaId: req.params.rutaId as string,
     })
     res.status(201).json(foto)
   } catch (e) { next(e) }
@@ -28,15 +28,15 @@ export const uploadToRuta = async (req: Request, res: Response, next: NextFuncti
 
 export const deleteFoto = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    await svc.deleteFoto(req.params.id)
+    await svc.deleteFoto(req.params.id as string)
     res.json({ message: 'Foto eliminada' })
   } catch (e) { next(e) }
 }
 
 export const getByGuia = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await svc.getFotosByGuia(req.params.guiaId)) } catch (e) { next(e) }
+  try { res.json(await svc.getFotosByGuia(req.params.guiaId as string)) } catch (e) { next(e) }
 }
 
 export const getByRuta = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await svc.getFotosByRuta(req.params.rutaId)) } catch (e) { next(e) }
+  try { res.json(await svc.getFotosByRuta(req.params.rutaId as string)) } catch (e) { next(e) }
 }

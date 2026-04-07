@@ -54,15 +54,16 @@ model Cliente {
 }
 
 model Usuario {
-  id         String   @id @default(cuid())
-  nombre     String
-  cedula     String?  @unique
-  email      String   @unique
-  password   String
-  rol        Rol
-  activo     Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  nombre              String
+  cedula              String?  @unique
+  email               String   @unique
+  password            String
+  rol                 Rol
+  activo              Boolean  @default(true)
+  mustChangePassword  Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   clienteId  String?
   cliente    Cliente? @relation(fields: [clienteId], references: [id])

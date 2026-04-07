@@ -14,6 +14,7 @@ export interface IAuthRepository {
     rol: string
     clienteId: string | null
     activo: boolean
+    mustChangePassword: boolean
   } | null>
 
   findUserById(id: string): Promise<{
@@ -23,7 +24,19 @@ export interface IAuthRepository {
     rol: string
     clienteId: string | null
     activo: boolean
+    mustChangePassword: boolean
   } | null>
+
+  createUser(data: {
+    nombre: string
+    email: string
+    password: string
+    rol: string
+    cedula?: string
+    clienteId?: string
+  }): Promise<{ id: string; nombre: string; email: string; rol: string }>
+
+  updatePassword(userId: string, hashedPassword: string): Promise<void>
 }
 
 export interface ITokenService {
@@ -33,4 +46,5 @@ export interface ITokenService {
 
 export interface IHashService {
   compare(plain: string, hashed: string): Promise<boolean>
+  hash(plain: string): Promise<string>
 }

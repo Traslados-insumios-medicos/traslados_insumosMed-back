@@ -10,6 +10,7 @@ export interface AuthPayload {
 
 export interface AuthResult {
   token: string
+  mustChangePassword: boolean
   usuario: {
     id: string
     nombre: string
