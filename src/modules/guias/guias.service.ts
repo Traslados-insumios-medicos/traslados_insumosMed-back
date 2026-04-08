@@ -157,4 +157,16 @@ export const updateEstado = (id: string, dto: UpdateEstadoGuiaDto) =>
   prisma.guiaEntrega.update({ where: { id }, data: { estado: dto.estado } })
 
 export const updateDetalle = (id: string, dto: UpdateDetalleGuiaDto) =>
-  prisma.guiaEntrega.update({ where: { id }, data: dto })
+  prisma.guiaEntrega.update({
+    where: { id },
+    data: dto,
+    select: {
+      id: true,
+      receptorNombre: true,
+      horaLlegada: true,
+      horaSalida: true,
+      temperatura: true,
+      observaciones: true,
+      updatedAt: true,
+    },
+  })
