@@ -141,8 +141,9 @@ async function main() {
     ]
   })
 
-  console.log('[OK] Ruta creada:', rutaRealista.id, '- Chofer:', chofer.nombre)
-  console.log('\n[OK] Seed completado')
+  console.log('[OK] Ruta realista múltiple creada para Chofer:', chofer.nombre, '- ID Ruta:', rutaRealista.id)
+
+  console.log('\n[OK] Seed completado. ¡Datos reales en Quito insertados!')
   console.log('─────────────────────────────')
   console.log('Admin    → admin@medlogix.ec    / Admin1234!')
   console.log('Chofer   → chofer@medlogix.ec   / Medlogix1234!')
