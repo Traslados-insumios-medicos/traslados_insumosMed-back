@@ -50,6 +50,7 @@ async function main() {
       direccion: 'Av. Amazonas N39-123, Quito',
       telefonoContacto: '+593 2 123 4567',
       emailContacto: 'logistica@cimed.ec',
+      tipo: 'PRINCIPAL',
       activo: true,
     },
   })
@@ -65,6 +66,8 @@ async function main() {
       direccion: 'Av. 10 de Agosto N25-45, Quito',
       telefonoContacto: '+593 2 234 5678',
       emailContacto: 'bodega@metrored.ec',
+      tipo: 'SECUNDARIO',
+      clientePrincipalId: clientePrincipal.id,
       activo: true,
     },
   })
@@ -102,6 +105,7 @@ async function main() {
       ruc: '1791234560003',
       direccion: 'Calle Veintimilla E4-66 y Paez, Quito',
       telefonoContacto: '+593 2 256 2296',
+      tipo: 'SECUNDARIO',
       activo: true,
     }
   })
@@ -112,6 +116,7 @@ async function main() {
       ruc: '1791234560004',
       direccion: 'Av. Mariana de Jesús y Nicolás Arteta, Quito',
       telefonoContacto: '+593 2 399 8000',
+      tipo: 'SECUNDARIO',
       activo: true,
     }
   })

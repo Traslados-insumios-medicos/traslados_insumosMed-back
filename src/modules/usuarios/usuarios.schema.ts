@@ -1,10 +1,10 @@
 import { z } from 'zod'
 
 export const createUsuarioSchema = z.object({
-  nombre: z.string().min(1),
-  email: z.string().email(),
+  nombre: z.string().regex(/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/, 'El nombre solo debe contener letras, tildes y ñ'),
+  email: z.string().regex(/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/, 'El email debe contener @, dominio y extensión válida (ej. usuario@empresa.com)'),
   password: z.string().min(6),
-  cedula: z.string().optional(),
+  cedula: z.string().regex(/^\d{10}$/, 'La cédula debe tener exactamente 10 dígitos numéricos').optional(),
   rol: z.enum(['ADMIN', 'CHOFER', 'CLIENTE']),
   clienteId: z.string().optional(),
 })
