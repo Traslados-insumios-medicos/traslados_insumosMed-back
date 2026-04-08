@@ -1,14 +1,16 @@
 import { prisma } from '../../config/prisma'
 import { UpdateUsuarioDto } from './usuarios.schema'
-import { Rol } from '@prisma/client'
+import { Prisma, Rol } from '@prisma/client'
 
 const SELECT = {
   id: true, nombre: true, email: true, cedula: true,
   rol: true, activo: true, clienteId: true,
 }
 
-export const getAll = async (rol?: Rol, page = 1, limit = 20) => {
-  const where = rol ? { rol } : undefined
+export const getAll = async (rol?: Rol, page = 1, limit = 20, activo?: boolean) => {
+  const where: Prisma.UsuarioWhereInput = {}
+  if (rol) where.rol = rol
+  if (activo !== undefined) where.activo = activo
   const skip = (page - 1) * limit
 
   const [data, total] = await prisma.$transaction([
