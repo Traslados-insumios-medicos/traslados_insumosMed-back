@@ -27,7 +27,7 @@ async function main() {
   const choferPassword = await bcrypt.hash('Medlogix1234!', 10)
   const chofer = await prisma.usuario.upsert({
     where: { email: 'chofer@medlogix.ec' },
-    update: {},
+    update: { password: choferPassword, activo: true, mustChangePassword: false },
     create: {
       nombre: 'Carlos Pérez',
       email: 'chofer@medlogix.ec',

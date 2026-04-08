@@ -17,7 +17,8 @@ export class AuthUseCases {
   ) {}
 
   async login(dto: LoginDto): Promise<AuthResult> {
-    const usuario = await this.repo.findUserByEmail(dto.email)
+    const email = dto.email.trim().toLowerCase()
+    const usuario = await this.repo.findUserByEmail(email)
     if (!usuario || !usuario.activo) {
       throw new AppError(401, 'Credenciales inválidas')
     }
