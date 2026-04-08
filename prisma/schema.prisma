@@ -15,15 +15,15 @@ model Cliente {
   telefonoContacto    String?
   emailContacto       String?
   activo              Boolean       @default(true)
-  tipo                TipoCliente   @default(SECUNDARIO)
-  clientePrincipalId  String?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
+  clientePrincipalId  String?
+  tipo                TipoCliente   @default(SECUNDARIO)
+  clientePrincipal    Cliente?      @relation("ClienteJerarquia", fields: [clientePrincipalId], references: [id])
+  clientesSecundarios Cliente[]     @relation("ClienteJerarquia")
   guias               GuiaEntrega[]
   stops               Stop[]
   usuarios            Usuario[]
-  clientePrincipal    Cliente?      @relation("ClienteJerarquia", fields: [clientePrincipalId], references: [id])
-  clientesSecundarios Cliente[]     @relation("ClienteJerarquia")
 }
 
 model Usuario {
@@ -43,16 +43,17 @@ model Usuario {
 }
 
 model Ruta {
-  id        String        @id @default(cuid())
-  fecha     String
-  estado    EstadoRuta    @default(PENDIENTE)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  choferId  String
-  fotos     Foto[]
-  guias     GuiaEntrega[]
-  chofer    Usuario       @relation(fields: [choferId], references: [id])
-  stops     Stop[]
+  id                String                  @id @default(cuid())
+  fecha             String
+  estado            EstadoRuta              @default(PENDIENTE)
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  choferId          String
+  seguimientoChofer EstadoSeguimientoChofer @default(NINGUNO)
+  fotos             Foto[]
+  guias             GuiaEntrega[]
+  chofer            Usuario                 @relation(fields: [choferId], references: [id])
+  stops             Stop[]
 }
 
 model Stop {
@@ -156,4 +157,11 @@ enum TipoFoto {
 enum TipoCliente {
   PRINCIPAL
   SECUNDARIO
+}
+
+enum EstadoSeguimientoChofer {
+  NINGUNO
+  EN_CAMINO
+  EN_TRAFICO
+  CERCA_DESTINO
 }
