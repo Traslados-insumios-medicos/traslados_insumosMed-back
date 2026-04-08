@@ -5,8 +5,9 @@ import { env } from '../config/env'
 import { JwtPayload } from '../middlewares/auth.middleware'
 
 export function initWebSocket(httpServer: HttpServer) {
+  const wsOrigin = env.NODE_ENV === 'development' ? true : env.FRONTEND_URLS
   const io = new Server(httpServer, {
-    cors: { origin: env.FRONTEND_URL, credentials: true },
+    cors: { origin: wsOrigin, credentials: true },
   })
 
   // Auth middleware — verifica JWT en handshake
