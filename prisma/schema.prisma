@@ -8,18 +8,22 @@ datasource db {
 }
 
 model Cliente {
-  id               String        @id @default(cuid())
-  nombre           String
-  ruc              String        @unique
-  direccion        String
-  telefonoContacto String?
-  emailContacto    String?
-  activo           Boolean       @default(true)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  guias            GuiaEntrega[]
-  stops            Stop[]
-  usuarios         Usuario[]
+  id                  String        @id @default(cuid())
+  nombre              String
+  ruc                 String        @unique
+  direccion           String
+  telefonoContacto    String?
+  emailContacto       String?
+  activo              Boolean       @default(true)
+  tipo                TipoCliente   @default(SECUNDARIO)
+  clientePrincipalId  String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  guias               GuiaEntrega[]
+  stops               Stop[]
+  usuarios            Usuario[]
+  clientePrincipal    Cliente?      @relation("ClienteJerarquia", fields: [clientePrincipalId], references: [id])
+  clientesSecundarios Cliente[]     @relation("ClienteJerarquia")
 }
 
 model Usuario {
@@ -147,4 +151,9 @@ enum TipoNovedad {
 enum TipoFoto {
   GUIA
   HOJA_RUTA
+}
+
+enum TipoCliente {
+  PRINCIPAL
+  SECUNDARIO
 }
