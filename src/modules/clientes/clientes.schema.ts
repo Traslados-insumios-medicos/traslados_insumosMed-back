@@ -10,7 +10,9 @@ export const createClienteSchema = z.object({
   clientePrincipalId: z.string().optional(),
 })
 
-export const updateClienteSchema = createClienteSchema.omit({ ruc: true }).partial()
+export const updateClienteSchema = createClienteSchema.omit({ ruc: true }).partial().extend({
+  clientePrincipalId: z.union([z.string().min(1), z.null()]).optional(),
+})
 
 export type CreateClienteDto = z.infer<typeof createClienteSchema>
 export type UpdateClienteDto = z.infer<typeof updateClienteSchema>
