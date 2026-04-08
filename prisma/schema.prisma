@@ -14,9 +14,13 @@ model Cliente {
   direccion        String
   telefonoContacto String?
   emailContacto    String?
+  tipo             TipoCliente   @default(SECUNDARIO)
+  clientePrincipalId String?
   activo           Boolean       @default(true)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
+  clientePrincipal Cliente?      @relation("JerarquiaCliente", fields: [clientePrincipalId], references: [id], onDelete: SetNull)
+  clientesSecundarios Cliente[]  @relation("JerarquiaCliente")
   guias            GuiaEntrega[]
   stops            Stop[]
   usuarios         Usuario[]
@@ -147,4 +151,9 @@ enum TipoNovedad {
 enum TipoFoto {
   GUIA
   HOJA_RUTA
+}
+
+enum TipoCliente {
+  PRINCIPAL
+  SECUNDARIO
 }
