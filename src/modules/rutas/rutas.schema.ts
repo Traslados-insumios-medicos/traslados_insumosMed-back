@@ -30,5 +30,10 @@ export const assignChoferSchema = z.object({
   choferId: z.string().min(1),
 })
 
+export const updateSeguimientoChoferSchema = z.object({
+  seguimientoChofer: z.enum(['EN_CAMINO', 'EN_TRAFICO', 'CERCA_DESTINO']),
+})
+
 export type CreateRutaDto = z.infer<typeof createRutaSchema>
 export type UpdateEstadoDto = z.infer<typeof updateEstadoSchema>
+export type UpdateSeguimientoChoferDto = z.infer<typeof updateSeguimientoChoferSchema>

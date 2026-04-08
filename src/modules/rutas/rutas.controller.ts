@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import { createRutaSchema, updateEstadoSchema, assignChoferSchema } from './rutas.schema'
+import { createRutaSchema, updateEstadoSchema, assignChoferSchema, updateSeguimientoChoferSchema } from './rutas.schema'
 import * as guiasSvc from '../guias/guias.service'
 import * as svc from './rutas.service'
 
@@ -57,8 +57,26 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
 export const updateEstado = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const dto = updateEstadoSchema.parse(req.body)
+    const ruta = await svc.getById(req.params.id as string)
+    if (req.user?.rol === 'CHOFER' && ruta.choferId !== req.user.userId) {
+      res.status(403).json({ message: 'No tiene permisos para esta ruta' })
+      return
+    }
     res.json(await svc.updateEstado(req.params.id as string, dto))
   } catch (e) { next(e) }
+}
+
+export const updateSeguimientoChofer = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const dto = updateSeguimientoChoferSchema.parse(req.body)
+    if (req.user?.rol !== 'CHOFER' || !req.user.userId) {
+      res.status(403).json({ message: 'Solo el chofer puede actualizar el seguimiento' })
+      return
+    }
+    res.json(await svc.updateSeguimientoChofer(req.params.id as string, req.user.userId, dto))
+  } catch (e) {
+    next(e)
+  }
 }
 
 export const assignChofer = async (req: Request, res: Response, next: NextFunction) => {

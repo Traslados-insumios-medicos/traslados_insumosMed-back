@@ -4,11 +4,20 @@ import jwt from 'jsonwebtoken'
 import { env } from '../config/env'
 import { JwtPayload } from '../middlewares/auth.middleware'
 
+let ioRef: Server | null = null
+
+/** Para emitir eventos desde servicios HTTP después del arranque. */
+export function getIo(): Server {
+  if (!ioRef) throw new Error('Socket.IO no inicializado')
+  return ioRef
+}
+
 export function initWebSocket(httpServer: HttpServer) {
   const wsOrigin = env.NODE_ENV === 'development' ? true : env.FRONTEND_URLS
   const io = new Server(httpServer, {
     cors: { origin: wsOrigin, credentials: true },
   })
+  ioRef = io
 
   // Auth middleware — verifica JWT en handshake
   io.use((socket, next) => {

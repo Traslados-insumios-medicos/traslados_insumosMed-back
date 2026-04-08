@@ -11,6 +11,7 @@ router.get('/', authorize('ADMIN', 'CHOFER'), ctrl.getAll)
 router.get('/:id', authorize('ADMIN', 'CHOFER', 'CLIENTE'), ctrl.getById)
 router.post('/', authorize('ADMIN'), ctrl.create)
 router.patch('/:id/estado', authorize('ADMIN', 'CHOFER'), ctrl.updateEstado)
+router.patch('/:id/seguimiento', authorize('CHOFER'), ctrl.updateSeguimientoChofer)
 router.patch('/:id/asignar-chofer', authorize('ADMIN'), ctrl.assignChofer)
 
 export default router
