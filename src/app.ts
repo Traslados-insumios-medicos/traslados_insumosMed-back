@@ -16,10 +16,17 @@ import reportesRoutes from './modules/reportes/reportes.routes'
 const app = express()
 
 // Middlewares globales
-app.use(cors({ 
-  origin: env.NODE_ENV === 'development' ? true : env.FRONTEND_URL, 
-  credentials: true 
-}))
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Permite requests sin origin (health checks/servidor a servidor) y todo en desarrollo.
+      if (!origin || env.NODE_ENV === 'development') return callback(null, true)
+      if (env.FRONTEND_URLS.includes(origin)) return callback(null, true)
+      return callback(new Error(`Origen no permitido por CORS: ${origin}`))
+    },
+    credentials: true,
+  }),
+)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 

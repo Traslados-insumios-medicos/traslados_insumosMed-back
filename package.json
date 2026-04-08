@@ -20,6 +20,9 @@
   "author": "",
   "license": "ISC",
   "type": "commonjs",
+  "prisma": {
+    "seed": "ts-node --transpile-only prisma/seed.ts"
+  },
   "bugs": {
     "url": "https://github.com/kevincatagnaclearminds-cell/translados-insumosMed-backend/issues"
   },

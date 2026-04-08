@@ -1,7 +1,9 @@
+import type { Prisma } from '@prisma/client'
 import { prisma } from '../../config/prisma'
 import { AppError } from '../../utils/app-error'
-import { CreateRutaDto, UpdateEstadoDto } from './rutas.schema'
-import { EstadoRuta } from '@prisma/client'
+import { CreateRutaDto, UpdateEstadoDto, UpdateSeguimientoChoferDto } from './rutas.schema'
+import { EstadoSeguimientoChofer } from '@prisma/client'
+import { getIo } from '../../websocket'
 
 const rutaInclude = {
   chofer: { select: { id: true, nombre: true, cedula: true } },
@@ -114,8 +116,44 @@ export const create = async (dto: CreateRutaDto) => {
   })
 }
 
-export const updateEstado = (id: string, dto: UpdateEstadoDto) =>
-  prisma.ruta.update({ where: { id }, data: { estado: dto.estado }, include: rutaInclude })
+export const updateEstado = async (id: string, dto: UpdateEstadoDto) => {
+  const data: Prisma.RutaUpdateInput = { estado: dto.estado }
+  if (dto.estado === 'EN_CURSO') {
+    data.seguimientoChofer = 'NINGUNO'
+  }
+  if (dto.estado === 'COMPLETADA' || dto.estado === 'CANCELADA' || dto.estado === 'PENDIENTE') {
+    data.seguimientoChofer = 'NINGUNO'
+  }
+  return prisma.ruta.update({ where: { id }, data, include: rutaInclude })
+}
+
+export const updateSeguimientoChofer = async (
+  rutaId: string,
+  choferUserId: string,
+  dto: UpdateSeguimientoChoferDto,
+) => {
+  const ruta = await prisma.ruta.findUnique({ where: { id: rutaId } })
+  if (!ruta) throw new AppError(404, 'Ruta no encontrada')
+  if (ruta.choferId !== choferUserId) throw new AppError(403, 'No autorizado')
+  if (ruta.estado !== 'EN_CURSO') {
+    throw new AppError(400, 'Solo puedes actualizar el seguimiento cuando la ruta está en curso')
+  }
+
+  const seguimientoChofer = dto.seguimientoChofer as EstadoSeguimientoChofer
+  const updated = await prisma.ruta.update({
+    where: { id: rutaId },
+    data: { seguimientoChofer },
+    include: rutaInclude,
+  })
+
+  try {
+    getIo().to(`ruta:${rutaId}`).emit('seguimiento_ruta', { rutaId, seguimientoChofer })
+  } catch {
+    // Ignorar si WS no está listo (tests / arranque)
+  }
+
+  return updated
+}
 
 export const assignChofer = async (id: string, choferId: string) => {
   const chofer = await prisma.usuario.findUnique({ where: { id: choferId } })

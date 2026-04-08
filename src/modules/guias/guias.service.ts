@@ -7,6 +7,7 @@ const rutaMini = {
     id: true,
     fecha: true,
     estado: true,
+    seguimientoChofer: true,
     choferId: true,
     chofer: { select: { id: true, nombre: true } },
   },
