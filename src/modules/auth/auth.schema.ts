@@ -6,10 +6,10 @@ export const loginSchema = z.object({
 })
 
 export const registerSchema = z.object({
-  nombre: z.string().min(2),
-  email: z.string().email(),
+  nombre: z.string().regex(/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/, 'El nombre solo debe contener letras, tildes y ñ'),
+  email: z.string().regex(/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/, 'El email debe contener @, dominio y extensión válida (ej. usuario@empresa.com)'),
   rol: z.enum(['ADMIN', 'CHOFER', 'CLIENTE']),
-  cedula: z.string().optional(),
+  cedula: z.string().regex(/^\d{10}$/, 'La cédula debe tener exactamente 10 dígitos numéricos').optional(),
   clienteId: z.string().optional(),
 })
 
