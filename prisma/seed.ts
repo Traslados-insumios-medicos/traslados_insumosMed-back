@@ -118,26 +118,19 @@ async function main() {
   // Crear Ruta de prueba realista para Carlos (Chofer)
   const fechaHoy = new Date().toISOString().split('T')[0]
   const rutaRealista = await prisma.ruta.create({
-    data: {
-      fecha: fechaHoy,
-      choferId: chofer.id,
-      estado: 'PENDIENTE',
-    }
+    data: { fecha: fechaHoy, choferId: chofer.id, estado: 'PENDIENTE' }
   })
 
-  // Parada 1
   const stop1 = await prisma.stop.create({
     data: { orden: 1, direccion: clienteSecundario.direccion, lat: -0.180653, lng: -78.467834, clienteId: clienteSecundario.id, rutaId: rutaRealista.id, notas: 'Acceso por puerta posterior (bodega)' }
   })
   await prisma.guiaEntrega.create({ data: { numeroGuia: 'G-10001', descripcion: 'Insumos Quirúrgicos - Cajas x5', estado: 'PENDIENTE', clienteId: clienteSecundario.id, rutaId: rutaRealista.id, stopId: stop1.id } })
 
-  // Parada 2
   const stop2 = await prisma.stop.create({
     data: { orden: 2, direccion: clinicaPichincha.direccion, lat: -0.2013, lng: -78.4947, clienteId: clinicaPichincha.id, rutaId: rutaRealista.id, notas: 'Entrega urgente en Recepción Médica' }
   })
   await prisma.guiaEntrega.create({ data: { numeroGuia: 'G-10002', descripcion: 'Material Desechable - Guantes y Mascarillas', estado: 'PENDIENTE', clienteId: clinicaPichincha.id, rutaId: rutaRealista.id, stopId: stop2.id } })
 
-  // Parada 3
   const stop3 = await prisma.stop.create({
     data: { orden: 3, direccion: hMetropolitano.direccion, lat: -0.1878, lng: -78.4984, clienteId: hMetropolitano.id, rutaId: rutaRealista.id, notas: 'Hablar con el encargado general logístico' }
   })
