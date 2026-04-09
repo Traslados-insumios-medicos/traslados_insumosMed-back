@@ -8,12 +8,3 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
 })
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
-
-// Manejar desconexiones
-prisma.$on('error', (e) => {
-  console.error('Prisma error:', e)
-})
-
-prisma.$on('warn', (e) => {
-  console.warn('Prisma warning:', e)
-})
