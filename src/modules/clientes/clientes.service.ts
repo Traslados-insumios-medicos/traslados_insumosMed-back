@@ -41,3 +41,25 @@ export const toggleActivo = async (id: string) => {
   const cliente = await prisma.cliente.findUniqueOrThrow({ where: { id } })
   return prisma.cliente.update({ where: { id }, data: { activo: !cliente.activo }, include: clienteInclude })
 }
+
+export const remove = async (id: string) => {
+  const cliente = await prisma.cliente.findUnique({
+    where: { id },
+    include: {
+      clientesSecundarios: { select: { id: true } },
+      _count: { select: { guias: true, stops: true, usuarios: true } },
+    },
+  })
+
+  if (!cliente) throw new AppError(404, 'Cliente no encontrado')
+
+  if (cliente.tipo === 'PRINCIPAL' && cliente.clientesSecundarios.length > 0) {
+    throw new AppError(409, 'No se puede eliminar un cliente principal que tiene clientes secundarios')
+  }
+
+  if (cliente._count.guias > 0 || cliente._count.stops > 0 || cliente._count.usuarios > 0) {
+    throw new AppError(409, 'No se puede eliminar el cliente porque tiene registros relacionados')
+  }
+
+  await prisma.cliente.delete({ where: { id } })
+}

@@ -32,3 +32,10 @@ export const update = async (req: Request, res: Response, next: NextFunction) =>
 export const toggleActivo = async (req: Request, res: Response, next: NextFunction) => {
   try { res.json(await svc.toggleActivo(req.params.id as string)) } catch (e) { next(e) }
 }
+
+export const remove = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await svc.remove(req.params.id as string)
+    res.status(204).send()
+  } catch (e) { next(e) }
+}
