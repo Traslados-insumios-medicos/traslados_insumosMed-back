@@ -86,9 +86,21 @@ async function removeClienteTx(
     }
   }
 
-  await tx.guiaEntrega.deleteMany({ where: { clienteId: id } })
+  const stopIds = (
+    await tx.stop.findMany({ where: { clienteId: id }, select: { id: true } })
+  ).map((s) => s.id)
+
+  const guiaWhere: Prisma.GuiaEntregaWhereInput =
+    stopIds.length > 0
+      ? { OR: [{ clienteId: id }, { stopId: { in: stopIds } }] }
+      : { clienteId: id }
+  await tx.guiaEntrega.deleteMany({ where: guiaWhere })
+
   await tx.stop.deleteMany({ where: { clienteId: id } })
+
   await tx.usuario.deleteMany({ where: { clienteId: id, rol: Rol.CLIENTE } })
+  /* Cualquier otro rol con clienteId (p. ej. datos legacy) bloqueaba el DELETE del Cliente. */
+  await tx.usuario.updateMany({ where: { clienteId: id }, data: { clienteId: null } })
 
   /* Rutas que quedan sin paradas (p. ej. solo tenían paradas de este cliente): borrado completo con guías/fotos/logs. */
   for (;;) {

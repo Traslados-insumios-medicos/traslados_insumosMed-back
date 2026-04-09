@@ -12,6 +12,7 @@ export type WebhookEventType =
   | 'ruta.estado_updated'
   | 'ruta.seguimiento_updated'
   | 'ruta.chofer_assigned'
+  | 'ruta.deleted'
 
 interface WebhookEvent<T = unknown> {
   id: string
