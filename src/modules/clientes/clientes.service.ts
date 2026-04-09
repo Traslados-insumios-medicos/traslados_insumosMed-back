@@ -86,30 +86,31 @@ async function removeClienteTx(
     }
   }
 
-  const stopIds = (
-    await tx.stop.findMany({ where: { clienteId: id }, select: { id: true } })
-  ).map((s) => s.id)
+  const rutaIdsTouched = [
+    ...new Set(
+      (await tx.stop.findMany({ where: { clienteId: id }, select: { rutaId: true } })).map((s) => s.rutaId),
+    ),
+  ]
 
-  const guiaWhere: Prisma.GuiaEntregaWhereInput =
-    stopIds.length > 0
-      ? { OR: [{ clienteId: id }, { stopId: { in: stopIds } }] }
-      : { clienteId: id }
-  await tx.guiaEntrega.deleteMany({ where: guiaWhere })
+  /* Relación stop.clienteId cubre guías mal alineadas (clienteId distinto pero parada de este cliente). */
+  await tx.guiaEntrega.deleteMany({
+    where: {
+      OR: [{ clienteId: id }, { stop: { clienteId: id } }],
+    },
+  })
 
   await tx.stop.deleteMany({ where: { clienteId: id } })
 
   await tx.usuario.deleteMany({ where: { clienteId: id, rol: Rol.CLIENTE } })
-  /* Cualquier otro rol con clienteId (p. ej. datos legacy) bloqueaba el DELETE del Cliente. */
   await tx.usuario.updateMany({ where: { clienteId: id }, data: { clienteId: null } })
 
-  /* Rutas que quedan sin paradas (p. ej. solo tenían paradas de este cliente): borrado completo con guías/fotos/logs. */
-  for (;;) {
-    const rutasVacias = await tx.ruta.findMany({
-      where: { stops: { none: {} } },
+  /* Solo rutas que tenían paradas de este cliente y quedaron sin paradas (no barrer TODAS las rutas vacías del sistema). */
+  for (const rutaId of rutaIdsTouched) {
+    const row = await tx.ruta.findFirst({
+      where: { id: rutaId, stops: { none: {} } },
       select: { id: true },
     })
-    if (rutasVacias.length === 0) break
-    await deleteRutasInTransaction(tx, rutasVacias.map((r) => r.id))
+    if (row) await deleteRutasInTransaction(tx, [row.id])
   }
 
   await tx.cliente.delete({ where: { id } })
@@ -119,7 +120,10 @@ async function removeClienteTx(
 
 export const remove = async (id: string) => {
   await ensureRutaSeguimientoLogsTable()
-  const deletedList = await prisma.$transaction((tx) => removeClienteTx(tx, id))
+  const deletedList = await prisma.$transaction((tx) => removeClienteTx(tx, id), {
+    maxWait: 10_000,
+    timeout: 60_000,
+  })
   for (const meta of deletedList) {
     emitWebhookEventAsync('cliente.deleted', {
       id: meta.id,

@@ -6,6 +6,7 @@ let seguimientoLogsTableEnsured = false
 /** La tabla de logs se crea en caliente; debe existir antes de DELETE en rutas o el servidor responde 500. */
 export async function ensureRutaSeguimientoLogsTable(): Promise<void> {
   if (seguimientoLogsTableEnsured) return
+  /* Sentencias separadas: algunos pools de Postgres fallan con múltiples statements en un solo round-trip. */
   await prisma.$executeRawUnsafe(`
     CREATE TABLE IF NOT EXISTS ruta_seguimiento_logs (
       id TEXT PRIMARY KEY,
@@ -13,9 +14,11 @@ export async function ensureRutaSeguimientoLogsTable(): Promise<void> {
       chofer_id TEXT NOT NULL,
       seguimiento_chofer TEXT NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-    );
+    )
+  `)
+  await prisma.$executeRawUnsafe(`
     CREATE INDEX IF NOT EXISTS idx_ruta_seguimiento_logs_ruta_id_created_at
-      ON ruta_seguimiento_logs (ruta_id, created_at DESC);
+      ON ruta_seguimiento_logs (ruta_id, created_at DESC)
   `)
   seguimientoLogsTableEnsured = true
 }
