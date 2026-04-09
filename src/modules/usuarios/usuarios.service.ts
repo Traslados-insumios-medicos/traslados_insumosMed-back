@@ -1,6 +1,7 @@
 import { prisma } from '../../config/prisma'
 import { UpdateUsuarioDto } from './usuarios.schema'
 import { Prisma, Rol } from '@prisma/client'
+import { AppError } from '../../utils/app-error'
 
 const SELECT = {
   id: true, nombre: true, email: true, cedula: true,
@@ -40,4 +41,17 @@ export const toggleActivo = async (id: string) => {
     data: { activo: !u.activo },
     select: { id: true, nombre: true, activo: true },
   })
+}
+
+export const remove = async (id: string) => {
+  const u = await prisma.usuario.findUnique({
+    where: { id },
+    include: { _count: { select: { rutas: true } } },
+  })
+  if (!u) throw new AppError(404, 'Usuario no encontrado')
+  if (u.rol !== Rol.CHOFER) throw new AppError(400, 'Solo se pueden eliminar choferes')
+  if (u._count.rutas > 0) {
+    throw new AppError(409, 'No se puede eliminar el chofer porque tiene rutas asignadas')
+  }
+  await prisma.usuario.delete({ where: { id } })
 }
