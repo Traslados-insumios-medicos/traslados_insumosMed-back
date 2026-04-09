@@ -86,17 +86,31 @@ async function removeClienteTx(
     }
   }
 
-  await tx.guiaEntrega.deleteMany({ where: { clienteId: id } })
-  await tx.stop.deleteMany({ where: { clienteId: id } })
-  await tx.usuario.deleteMany({ where: { clienteId: id, rol: Rol.CLIENTE } })
+  const rutaIdsTouched = [
+    ...new Set(
+      (await tx.stop.findMany({ where: { clienteId: id }, select: { rutaId: true } })).map((s) => s.rutaId),
+    ),
+  ]
 
-  const rutasVacias = await tx.ruta.findMany({
-    where: { stops: { none: {} } },
-    select: { id: true },
+  /* Relación stop.clienteId cubre guías mal alineadas (clienteId distinto pero parada de este cliente). */
+  await tx.guiaEntrega.deleteMany({
+    where: {
+      OR: [{ clienteId: id }, { stop: { clienteId: id } }],
+    },
   })
-  if (rutasVacias.length > 0) {
-    const vaciaIds = rutasVacias.map((r) => r.id)
-    await deleteRutasInTransaction(tx, vaciaIds)
+
+  await tx.stop.deleteMany({ where: { clienteId: id } })
+
+  await tx.usuario.deleteMany({ where: { clienteId: id, rol: Rol.CLIENTE } })
+  await tx.usuario.updateMany({ where: { clienteId: id }, data: { clienteId: null } })
+
+  /* Solo rutas que tenían paradas de este cliente y quedaron sin paradas (no barrer TODAS las rutas vacías del sistema). */
+  for (const rutaId of rutaIdsTouched) {
+    const row = await tx.ruta.findFirst({
+      where: { id: rutaId, stops: { none: {} } },
+      select: { id: true },
+    })
+    if (row) await deleteRutasInTransaction(tx, [row.id])
   }
 
   await tx.cliente.delete({ where: { id } })
@@ -106,7 +120,10 @@ async function removeClienteTx(
 
 export const remove = async (id: string) => {
   await ensureRutaSeguimientoLogsTable()
-  const deletedList = await prisma.$transaction((tx) => removeClienteTx(tx, id))
+  const deletedList = await prisma.$transaction((tx) => removeClienteTx(tx, id), {
+    maxWait: 10_000,
+    timeout: 60_000,
+  })
   for (const meta of deletedList) {
     emitWebhookEventAsync('cliente.deleted', {
       id: meta.id,

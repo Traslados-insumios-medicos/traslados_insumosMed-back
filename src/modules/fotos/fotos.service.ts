@@ -34,9 +34,12 @@ export async function uploadFoto({ buffer, tipo, guiaId, rutaId }: UploadFotoPar
 export async function deleteFoto(id: string) {
   const foto = await prisma.foto.findUniqueOrThrow({ where: { id } })
 
-  // Eliminar de Cloudinary si tiene publicId
   if (foto.publicId) {
-    await cloudinary.uploader.destroy(foto.publicId)
+    try {
+      await cloudinary.uploader.destroy(foto.publicId)
+    } catch {
+      /* No bloquear borrado en BD si Cloudinary falla o el asset ya no existe */
+    }
   }
 
   return prisma.foto.delete({ where: { id } })

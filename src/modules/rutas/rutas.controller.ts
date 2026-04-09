@@ -112,3 +112,12 @@ export const assignChofer = async (req: Request, res: Response, next: NextFuncti
     res.json(await svc.assignChofer(req.params.id as string, choferId))
   } catch (e) { next(e) }
 }
+
+export const remove = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await svc.remove(req.params.id as string)
+    res.status(204).send()
+  } catch (e) {
+    next(e)
+  }
+}

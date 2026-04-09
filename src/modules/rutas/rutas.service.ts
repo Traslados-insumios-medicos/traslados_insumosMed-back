@@ -1,7 +1,7 @@
 import crypto from 'crypto'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '../../config/prisma'
-import { ensureRutaSeguimientoLogsTable } from '../../db/rutaHardDelete'
+import { ensureRutaSeguimientoLogsTable, deleteRutasInTransaction } from '../../db/rutaHardDelete'
 import { AppError } from '../../utils/app-error'
 import { CreateRutaDto, UpdateEstadoDto, UpdateSeguimientoChoferDto } from './rutas.schema'
 import { EstadoSeguimientoChofer } from '@prisma/client'
@@ -229,4 +229,18 @@ export const assignChofer = async (id: string, choferId: string) => {
     estado: updated.estado,
   })
   return updated
+}
+
+export const remove = async (id: string) => {
+  const ruta = await prisma.ruta.findUnique({ where: { id }, select: { id: true, choferId: true, fecha: true } })
+  if (!ruta) throw new AppError(404, 'Ruta no encontrada')
+  await ensureRutaSeguimientoLogsTable()
+  await prisma.$transaction(async (tx) => {
+    await deleteRutasInTransaction(tx, [id])
+  })
+  emitWebhookEventAsync('ruta.deleted', {
+    id: ruta.id,
+    choferId: ruta.choferId,
+    fecha: ruta.fecha,
+  })
 }

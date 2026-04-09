@@ -14,5 +14,6 @@ router.post('/', authorize('ADMIN'), ctrl.create)
 router.patch('/:id/estado', authorize('ADMIN', 'CHOFER'), ctrl.updateEstado)
 router.patch('/:id/seguimiento', authorize('CHOFER'), ctrl.updateSeguimientoChofer)
 router.patch('/:id/asignar-chofer', authorize('ADMIN'), ctrl.assignChofer)
+router.delete('/:id', authorize('ADMIN'), ctrl.remove)
 
 export default router
