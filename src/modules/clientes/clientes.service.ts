@@ -90,13 +90,14 @@ async function removeClienteTx(
   await tx.stop.deleteMany({ where: { clienteId: id } })
   await tx.usuario.deleteMany({ where: { clienteId: id, rol: Rol.CLIENTE } })
 
-  const rutasVacias = await tx.ruta.findMany({
-    where: { stops: { none: {} } },
-    select: { id: true },
-  })
-  if (rutasVacias.length > 0) {
-    const vaciaIds = rutasVacias.map((r) => r.id)
-    await deleteRutasInTransaction(tx, vaciaIds)
+  /* Rutas que quedan sin paradas (p. ej. solo tenían paradas de este cliente): borrado completo con guías/fotos/logs. */
+  for (;;) {
+    const rutasVacias = await tx.ruta.findMany({
+      where: { stops: { none: {} } },
+      select: { id: true },
+    })
+    if (rutasVacias.length === 0) break
+    await deleteRutasInTransaction(tx, rutasVacias.map((r) => r.id))
   }
 
   await tx.cliente.delete({ where: { id } })
