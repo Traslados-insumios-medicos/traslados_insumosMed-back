@@ -79,6 +79,33 @@ export const updateSeguimientoChofer = async (req: Request, res: Response, next:
   }
 }
 
+export const getSeguimientoHistory = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const ruta = await svc.getById(req.params.id as string)
+    if (req.user?.rol === 'CHOFER' && ruta.choferId !== req.user.userId) {
+      res.status(403).json({ message: 'No tiene permisos para esta ruta' })
+      return
+    }
+    if (req.user?.rol === 'CLIENTE') {
+      const cid = req.user.clienteId
+      if (!cid) {
+        res.status(403).json({ message: 'Sin cliente asociado' })
+        return
+      }
+      const ids = await guiasSvc.resolveAlcanceClienteIds(cid)
+      const puede = ruta.guias.some((g) => ids.includes(g.clienteId))
+      if (!puede) {
+        res.status(403).json({ message: 'No tiene permisos para ver esta ruta' })
+        return
+      }
+    }
+    const limit = Math.max(1, Math.min(500, parseInt(req.query.limit as string) || 100))
+    res.json({ data: await svc.getSeguimientoHistory(req.params.id as string, limit) })
+  } catch (e) {
+    next(e)
+  }
+}
+
 export const assignChofer = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { choferId } = assignChoferSchema.parse(req.body)

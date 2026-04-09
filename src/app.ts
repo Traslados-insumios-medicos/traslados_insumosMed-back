@@ -12,6 +12,7 @@ import guiasRoutes from './modules/guias/guias.routes'
 import fotosRoutes from './modules/fotos/fotos.routes'
 import novedadesRoutes from './modules/novedades/novedades.routes'
 import reportesRoutes from './modules/reportes/reportes.routes'
+import webhooksRoutes from './modules/webhooks/webhooks.routes'
 
 const app = express()
 
@@ -42,6 +43,7 @@ app.use('/api/guias', guiasRoutes)
 app.use('/api/fotos', fotosRoutes)
 app.use('/api/novedades', novedadesRoutes)
 app.use('/api/reportes', reportesRoutes)
+app.use('/api/webhooks', webhooksRoutes)
 
 // Error handler global (siempre al final)
 app.use(errorHandler)

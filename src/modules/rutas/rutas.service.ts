@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '../../config/prisma'
 import { AppError } from '../../utils/app-error'
@@ -5,6 +6,32 @@ import { CreateRutaDto, UpdateEstadoDto, UpdateSeguimientoChoferDto } from './ru
 import { EstadoSeguimientoChofer } from '@prisma/client'
 import { getIo } from '../../websocket'
 import { emitWebhookEventAsync } from '../webhooks/webhooks.service'
+
+interface SeguimientoRutaLog {
+  id: string
+  rutaId: string
+  choferId: string
+  seguimientoChofer: string
+  createdAt: Date
+}
+
+let trackingTableEnsured = false
+
+async function ensureTrackingTable() {
+  if (trackingTableEnsured) return
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS ruta_seguimiento_logs (
+      id TEXT PRIMARY KEY,
+      ruta_id TEXT NOT NULL,
+      chofer_id TEXT NOT NULL,
+      seguimiento_chofer TEXT NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_ruta_seguimiento_logs_ruta_id_created_at
+      ON ruta_seguimiento_logs (ruta_id, created_at DESC);
+  `)
+  trackingTableEnsured = true
+}
 
 const rutaInclude = {
   chofer: { select: { id: true, nombre: true, cedula: true } },
@@ -168,6 +195,12 @@ export const updateSeguimientoChofer = async (
     // Ignorar si WS no está listo (tests / arranque)
   }
 
+  await ensureTrackingTable()
+  await prisma.$executeRaw`
+    INSERT INTO ruta_seguimiento_logs (id, ruta_id, chofer_id, seguimiento_chofer)
+    VALUES (${crypto.randomUUID()}, ${rutaId}, ${choferUserId}, ${seguimientoChofer})
+  `
+
   emitWebhookEventAsync('ruta.seguimiento_updated', {
     id: updated.id,
     seguimientoChofer: updated.seguimientoChofer,
@@ -176,6 +209,31 @@ export const updateSeguimientoChofer = async (
   })
 
   return updated
+}
+
+export const getSeguimientoHistory = async (rutaId: string, limit = 100): Promise<SeguimientoRutaLog[]> => {
+  await ensureTrackingTable()
+  const max = Math.max(1, Math.min(500, limit))
+  const rows = await prisma.$queryRaw<{
+    id: string
+    ruta_id: string
+    chofer_id: string
+    seguimiento_chofer: string
+    created_at: Date
+  }[]>`
+    SELECT id, ruta_id, chofer_id, seguimiento_chofer, created_at
+    FROM ruta_seguimiento_logs
+    WHERE ruta_id = ${rutaId}
+    ORDER BY created_at DESC
+    LIMIT ${max}
+  `
+  return rows.map((r) => ({
+    id: r.id,
+    rutaId: r.ruta_id,
+    choferId: r.chofer_id,
+    seguimientoChofer: r.seguimiento_chofer,
+    createdAt: r.created_at,
+  }))
 }
 
 export const assignChofer = async (id: string, choferId: string) => {
