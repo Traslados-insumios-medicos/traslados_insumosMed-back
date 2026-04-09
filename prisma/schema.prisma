@@ -12,6 +12,8 @@ model Cliente {
   nombre              String
   ruc                 String        @unique
   direccion           String
+  lat                 Float?
+  lng                 Float?
   telefonoContacto    String?
   emailContacto       String?
   activo              Boolean       @default(true)

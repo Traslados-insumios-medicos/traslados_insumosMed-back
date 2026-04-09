@@ -43,11 +43,13 @@ async function main() {
   // Cliente principal de prueba
   const clientePrincipal = await prisma.cliente.upsert({
     where: { ruc: '1791234560001' },
-    update: {},
+    update: { lat: -0.1807, lng: -78.4678 },
     create: {
       nombre: 'CIMED S.A.',
       ruc: '1791234560001',
       direccion: 'Av. Amazonas N39-123, Quito',
+      lat: -0.1807,
+      lng: -78.4678,
       telefonoContacto: '+593 2 123 4567',
       emailContacto: 'logistica@cimed.ec',
       tipo: 'PRINCIPAL',
@@ -59,11 +61,13 @@ async function main() {
   // Cliente secundario (punto de entrega)
   const clienteSecundario = await prisma.cliente.upsert({
     where: { ruc: '1791234560002' },
-    update: {},
+    update: { lat: -0.2105, lng: -78.4896 },
     create: {
       nombre: 'Metrored Hospital',
       ruc: '1791234560002',
       direccion: 'Av. 10 de Agosto N25-45, Quito',
+      lat: -0.2105,
+      lng: -78.4896,
       telefonoContacto: '+593 2 234 5678',
       emailContacto: 'bodega@metrored.ec',
       tipo: 'SECUNDARIO',
@@ -104,6 +108,8 @@ async function main() {
       nombre: 'Clínica Pichincha',
       ruc: '1791234560003',
       direccion: 'Calle Veintimilla E4-66 y Paez, Quito',
+      lat: -0.2013,
+      lng: -78.4947,
       telefonoContacto: '+593 2 256 2296',
       tipo: 'SECUNDARIO',
       activo: true,
@@ -115,6 +121,8 @@ async function main() {
       nombre: 'Hospital Metropolitano',
       ruc: '1791234560004',
       direccion: 'Av. Mariana de Jesús y Nicolás Arteta, Quito',
+      lat: -0.1878,
+      lng: -78.4984,
       telefonoContacto: '+593 2 399 8000',
       tipo: 'SECUNDARIO',
       activo: true,
