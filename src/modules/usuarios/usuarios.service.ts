@@ -44,14 +44,17 @@ export const toggleActivo = async (id: string) => {
 }
 
 export const remove = async (id: string) => {
-  const u = await prisma.usuario.findUnique({
-    where: { id },
-    include: { _count: { select: { rutas: true } } },
-  })
+  const u = await prisma.usuario.findUnique({ where: { id } })
   if (!u) throw new AppError(404, 'Usuario no encontrado')
   if (u.rol !== Rol.CHOFER) throw new AppError(400, 'Solo se pueden eliminar choferes')
-  if (u._count.rutas > 0) {
-    throw new AppError(409, 'No se puede eliminar el chofer porque tiene rutas asignadas')
-  }
-  await prisma.usuario.delete({ where: { id } })
+
+  await prisma.$transaction(async (tx) => {
+    const rutas = await tx.ruta.findMany({ where: { choferId: id }, select: { id: true } })
+    const rutaIds = rutas.map((r) => r.id)
+    if (rutaIds.length > 0) {
+      await tx.$executeRaw`DELETE FROM ruta_seguimiento_logs WHERE ruta_id IN (${Prisma.join(rutaIds)})`
+      await tx.ruta.deleteMany({ where: { choferId: id } })
+    }
+    await tx.usuario.delete({ where: { id } })
+  })
 }

@@ -1,4 +1,4 @@
-import { Prisma, TipoCliente } from '@prisma/client'
+import { Prisma, TipoCliente, Rol } from '@prisma/client'
 import { prisma } from '../../config/prisma'
 import { AppError } from '../../utils/app-error'
 import { CreateClienteDto, UpdateClienteDto } from './clientes.schema'
@@ -66,29 +66,51 @@ export const toggleActivo = async (id: string) => {
   return updated
 }
 
-export const remove = async (id: string) => {
-  const cliente = await prisma.cliente.findUnique({
+/** Elimina guías, paradas y usuarios cliente; secundarios primero si es principal; rutas huérfanas. */
+async function removeClienteTx(
+  tx: Prisma.TransactionClient,
+  id: string,
+): Promise<{ id: string; nombre: string; tipo: TipoCliente }[]> {
+  const cliente = await tx.cliente.findUnique({
     where: { id },
-    include: {
-      clientesSecundarios: { select: { id: true } },
-      _count: { select: { guias: true, stops: true, usuarios: true } },
-    },
+    include: { clientesSecundarios: { select: { id: true } } },
   })
-
   if (!cliente) throw new AppError(404, 'Cliente no encontrado')
 
+  const deletedMeta: { id: string; nombre: string; tipo: TipoCliente }[] = []
+
   if (cliente.tipo === 'PRINCIPAL' && cliente.clientesSecundarios.length > 0) {
-    throw new AppError(409, 'No se puede eliminar un cliente principal que tiene clientes secundarios')
+    for (const s of cliente.clientesSecundarios) {
+      deletedMeta.push(...(await removeClienteTx(tx, s.id)))
+    }
   }
 
-  if (cliente._count.guias > 0 || cliente._count.stops > 0 || cliente._count.usuarios > 0) {
-    throw new AppError(409, 'No se puede eliminar el cliente porque tiene registros relacionados')
-  }
+  await tx.guiaEntrega.deleteMany({ where: { clienteId: id } })
+  await tx.stop.deleteMany({ where: { clienteId: id } })
+  await tx.usuario.deleteMany({ where: { clienteId: id, rol: Rol.CLIENTE } })
 
-  await prisma.cliente.delete({ where: { id } })
-  emitWebhookEventAsync('cliente.deleted', {
-    id: cliente.id,
-    nombre: cliente.nombre,
-    tipo: cliente.tipo,
+  const rutasVacias = await tx.ruta.findMany({
+    where: { stops: { none: {} } },
+    select: { id: true },
   })
+  if (rutasVacias.length > 0) {
+    const vaciaIds = rutasVacias.map((r) => r.id)
+    await tx.$executeRaw`DELETE FROM ruta_seguimiento_logs WHERE ruta_id IN (${Prisma.join(vaciaIds)})`
+    await tx.ruta.deleteMany({ where: { id: { in: vaciaIds } } })
+  }
+
+  await tx.cliente.delete({ where: { id } })
+  deletedMeta.push({ id: cliente.id, nombre: cliente.nombre, tipo: cliente.tipo })
+  return deletedMeta
+}
+
+export const remove = async (id: string) => {
+  const deletedList = await prisma.$transaction((tx) => removeClienteTx(tx, id))
+  for (const meta of deletedList) {
+    emitWebhookEventAsync('cliente.deleted', {
+      id: meta.id,
+      nombre: meta.nombre,
+      tipo: meta.tipo,
+    })
+  }
 }
