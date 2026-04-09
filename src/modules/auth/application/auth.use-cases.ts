@@ -19,8 +19,11 @@ export class AuthUseCases {
   async login(dto: LoginDto): Promise<AuthResult> {
     const email = dto.email.trim().toLowerCase()
     const usuario = await this.repo.findUserByEmail(email)
-    if (!usuario || !usuario.activo) {
+    if (!usuario) {
       throw new AppError(401, 'Credenciales inválidas')
+    }
+    if (!usuario.activo) {
+      throw new AppError(403, 'Su acceso está inactivo. Contacte al administrador de la empresa.')
     }
 
     const valid = await this.hashService.compare(dto.password, usuario.password)

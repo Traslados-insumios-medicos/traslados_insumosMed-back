@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express'
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env'
 import { Rol } from '@prisma/client'
+import { prisma } from '../config/prisma'
 
 export interface JwtPayload {
   userId: string
@@ -17,7 +18,7 @@ declare global {
   }
 }
 
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({ message: 'Token requerido' })
@@ -27,6 +28,18 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   const token = authHeader.split(' ')[1]
   try {
     const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload
+    const user = await prisma.usuario.findUnique({
+      where: { id: payload.userId },
+      select: { activo: true },
+    })
+    if (!user) {
+      res.status(401).json({ message: 'Usuario no encontrado' })
+      return
+    }
+    if (!user.activo) {
+      res.status(403).json({ message: 'Su acceso está inactivo. Contacte al administrador de la empresa.' })
+      return
+    }
     req.user = payload
     next()
   } catch {
