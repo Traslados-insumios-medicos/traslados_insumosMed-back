@@ -15,6 +15,8 @@ import reportesRoutes from './modules/reportes/reportes.routes'
 import webhooksRoutes from './modules/webhooks/webhooks.routes'
 
 const app = express()
+// Render/Reverse proxies: necesario para IP real y middlewares como rate-limit.
+app.set('trust proxy', 1)
 
 // Middlewares globales
 app.use(
