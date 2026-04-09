@@ -1,5 +1,6 @@
 import { Prisma, TipoCliente, Rol } from '@prisma/client'
 import { prisma } from '../../config/prisma'
+import { ensureRutaSeguimientoLogsTable, deleteRutasInTransaction } from '../../db/rutaHardDelete'
 import { AppError } from '../../utils/app-error'
 import { CreateClienteDto, UpdateClienteDto } from './clientes.schema'
 import { emitWebhookEventAsync } from '../webhooks/webhooks.service'
@@ -95,8 +96,7 @@ async function removeClienteTx(
   })
   if (rutasVacias.length > 0) {
     const vaciaIds = rutasVacias.map((r) => r.id)
-    await tx.$executeRaw`DELETE FROM ruta_seguimiento_logs WHERE ruta_id IN (${Prisma.join(vaciaIds)})`
-    await tx.ruta.deleteMany({ where: { id: { in: vaciaIds } } })
+    await deleteRutasInTransaction(tx, vaciaIds)
   }
 
   await tx.cliente.delete({ where: { id } })
@@ -105,6 +105,7 @@ async function removeClienteTx(
 }
 
 export const remove = async (id: string) => {
+  await ensureRutaSeguimientoLogsTable()
   const deletedList = await prisma.$transaction((tx) => removeClienteTx(tx, id))
   for (const meta of deletedList) {
     emitWebhookEventAsync('cliente.deleted', {

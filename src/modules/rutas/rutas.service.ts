@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import type { Prisma } from '@prisma/client'
 import { prisma } from '../../config/prisma'
+import { ensureRutaSeguimientoLogsTable } from '../../db/rutaHardDelete'
 import { AppError } from '../../utils/app-error'
 import { CreateRutaDto, UpdateEstadoDto, UpdateSeguimientoChoferDto } from './rutas.schema'
 import { EstadoSeguimientoChofer } from '@prisma/client'
@@ -13,24 +14,6 @@ interface SeguimientoRutaLog {
   choferId: string
   seguimientoChofer: string
   createdAt: Date
-}
-
-let trackingTableEnsured = false
-
-async function ensureTrackingTable() {
-  if (trackingTableEnsured) return
-  await prisma.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS ruta_seguimiento_logs (
-      id TEXT PRIMARY KEY,
-      ruta_id TEXT NOT NULL,
-      chofer_id TEXT NOT NULL,
-      seguimiento_chofer TEXT NOT NULL,
-      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-    );
-    CREATE INDEX IF NOT EXISTS idx_ruta_seguimiento_logs_ruta_id_created_at
-      ON ruta_seguimiento_logs (ruta_id, created_at DESC);
-  `)
-  trackingTableEnsured = true
 }
 
 const rutaInclude = {
@@ -195,7 +178,7 @@ export const updateSeguimientoChofer = async (
     // Ignorar si WS no está listo (tests / arranque)
   }
 
-  await ensureTrackingTable()
+  await ensureRutaSeguimientoLogsTable()
   await prisma.$executeRaw`
     INSERT INTO ruta_seguimiento_logs (id, ruta_id, chofer_id, seguimiento_chofer)
     VALUES (${crypto.randomUUID()}, ${rutaId}, ${choferUserId}, ${seguimientoChofer})
@@ -212,7 +195,7 @@ export const updateSeguimientoChofer = async (
 }
 
 export const getSeguimientoHistory = async (rutaId: string, limit = 100): Promise<SeguimientoRutaLog[]> => {
-  await ensureTrackingTable()
+  await ensureRutaSeguimientoLogsTable()
   const max = Math.max(1, Math.min(500, limit))
   const rows = await prisma.$queryRaw<{
     id: string

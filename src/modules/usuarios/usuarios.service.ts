@@ -1,4 +1,5 @@
 import { prisma } from '../../config/prisma'
+import { ensureRutaSeguimientoLogsTable, deleteRutasInTransaction } from '../../db/rutaHardDelete'
 import { UpdateUsuarioDto } from './usuarios.schema'
 import { Prisma, Rol } from '@prisma/client'
 import { AppError } from '../../utils/app-error'
@@ -48,13 +49,11 @@ export const remove = async (id: string) => {
   if (!u) throw new AppError(404, 'Usuario no encontrado')
   if (u.rol !== Rol.CHOFER) throw new AppError(400, 'Solo se pueden eliminar choferes')
 
+  await ensureRutaSeguimientoLogsTable()
   await prisma.$transaction(async (tx) => {
     const rutas = await tx.ruta.findMany({ where: { choferId: id }, select: { id: true } })
     const rutaIds = rutas.map((r) => r.id)
-    if (rutaIds.length > 0) {
-      await tx.$executeRaw`DELETE FROM ruta_seguimiento_logs WHERE ruta_id IN (${Prisma.join(rutaIds)})`
-      await tx.ruta.deleteMany({ where: { choferId: id } })
-    }
+    await deleteRutasInTransaction(tx, rutaIds)
     await tx.usuario.delete({ where: { id } })
   })
 }
