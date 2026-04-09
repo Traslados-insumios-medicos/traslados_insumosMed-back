@@ -2,6 +2,7 @@ import { Prisma, TipoCliente } from '@prisma/client'
 import { prisma } from '../../config/prisma'
 import { AppError } from '../../utils/app-error'
 import { CreateClienteDto, UpdateClienteDto } from './clientes.schema'
+import { emitWebhookEventAsync } from '../webhooks/webhooks.service'
 
 const clienteInclude = {
   clientePrincipal: { select: { id: true, nombre: true } },
@@ -31,15 +32,38 @@ export const create = async (dto: CreateClienteDto) => {
     if (principal.tipo !== 'PRINCIPAL') throw new AppError(400, 'El cliente referenciado no es PRINCIPAL')
   }
 
-  return prisma.cliente.create({ data: dto as Prisma.ClienteCreateInput, include: clienteInclude })
+  const created = await prisma.cliente.create({ data: dto as Prisma.ClienteCreateInput, include: clienteInclude })
+  emitWebhookEventAsync('cliente.created', {
+    id: created.id,
+    nombre: created.nombre,
+    tipo: created.tipo,
+    activo: created.activo,
+    clientePrincipalId: created.clientePrincipalId ?? null,
+  })
+  return created
 }
 
-export const update = (id: string, dto: UpdateClienteDto) =>
-  prisma.cliente.update({ where: { id }, data: dto as Prisma.ClienteUpdateInput, include: clienteInclude })
+export const update = async (id: string, dto: UpdateClienteDto) => {
+  const updated = await prisma.cliente.update({ where: { id }, data: dto as Prisma.ClienteUpdateInput, include: clienteInclude })
+  emitWebhookEventAsync('cliente.updated', {
+    id: updated.id,
+    nombre: updated.nombre,
+    tipo: updated.tipo,
+    activo: updated.activo,
+    clientePrincipalId: updated.clientePrincipalId ?? null,
+  })
+  return updated
+}
 
 export const toggleActivo = async (id: string) => {
   const cliente = await prisma.cliente.findUniqueOrThrow({ where: { id } })
-  return prisma.cliente.update({ where: { id }, data: { activo: !cliente.activo }, include: clienteInclude })
+  const updated = await prisma.cliente.update({ where: { id }, data: { activo: !cliente.activo }, include: clienteInclude })
+  emitWebhookEventAsync('cliente.activo_toggled', {
+    id: updated.id,
+    nombre: updated.nombre,
+    activo: updated.activo,
+  })
+  return updated
 }
 
 export const remove = async (id: string) => {
@@ -62,4 +86,9 @@ export const remove = async (id: string) => {
   }
 
   await prisma.cliente.delete({ where: { id } })
+  emitWebhookEventAsync('cliente.deleted', {
+    id: cliente.id,
+    nombre: cliente.nombre,
+    tipo: cliente.tipo,
+  })
 }

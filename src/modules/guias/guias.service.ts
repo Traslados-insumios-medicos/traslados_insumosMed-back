@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client'
 import { prisma } from '../../config/prisma'
 import { UpdateEstadoGuiaDto, UpdateDetalleGuiaDto } from './guias.schema'
+import { emitWebhookEventAsync } from '../webhooks/webhooks.service'
 
 const rutaMini = {
   select: {
@@ -153,15 +154,29 @@ export async function getMisEnviosList(q: MisEnviosQuery) {
   }
 }
 
-export const updateEstado = (id: string, dto: UpdateEstadoGuiaDto) =>
-  prisma.guiaEntrega.update({ where: { id }, data: { estado: dto.estado } })
+export const updateEstado = async (id: string, dto: UpdateEstadoGuiaDto) => {
+  const guia = await prisma.guiaEntrega.update({ where: { id }, data: { estado: dto.estado } })
+  emitWebhookEventAsync('guia.estado_updated', {
+    id: guia.id,
+    numeroGuia: guia.numeroGuia,
+    estado: guia.estado,
+    rutaId: guia.rutaId,
+    clienteId: guia.clienteId,
+    stopId: guia.stopId,
+  })
+  return guia
+}
 
-export const updateDetalle = (id: string, dto: UpdateDetalleGuiaDto) =>
-  prisma.guiaEntrega.update({
+export const updateDetalle = async (id: string, dto: UpdateDetalleGuiaDto) => {
+  const guia = await prisma.guiaEntrega.update({
     where: { id },
     data: dto,
     select: {
       id: true,
+      numeroGuia: true,
+      clienteId: true,
+      rutaId: true,
+      stopId: true,
       receptorNombre: true,
       horaLlegada: true,
       horaSalida: true,
@@ -170,3 +185,6 @@ export const updateDetalle = (id: string, dto: UpdateDetalleGuiaDto) =>
       updatedAt: true,
     },
   })
+  emitWebhookEventAsync('guia.detalle_updated', guia)
+  return guia
+}

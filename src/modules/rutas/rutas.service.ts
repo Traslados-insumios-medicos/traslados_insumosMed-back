@@ -4,6 +4,7 @@ import { AppError } from '../../utils/app-error'
 import { CreateRutaDto, UpdateEstadoDto, UpdateSeguimientoChoferDto } from './rutas.schema'
 import { EstadoSeguimientoChofer } from '@prisma/client'
 import { getIo } from '../../websocket'
+import { emitWebhookEventAsync } from '../webhooks/webhooks.service'
 
 const rutaInclude = {
   chofer: { select: { id: true, nombre: true, cedula: true } },
@@ -65,7 +66,7 @@ export const create = async (dto: CreateRutaDto) => {
   const timestamp = String(Date.now()).slice(-6)
   let guiaCounter = 0
 
-  return prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx) => {
     // Create the ruta
     const ruta = await tx.ruta.create({
       data: {
@@ -114,6 +115,14 @@ export const create = async (dto: CreateRutaDto) => {
     // Return full ruta with includes
     return tx.ruta.findUniqueOrThrow({ where: { id: ruta.id }, include: rutaInclude })
   })
+  emitWebhookEventAsync('ruta.created', {
+    id: created.id,
+    fecha: created.fecha,
+    estado: created.estado,
+    choferId: created.choferId,
+    stops: created.stops.map((s) => ({ id: s.id, orden: s.orden, clienteId: s.clienteId })),
+  })
+  return created
 }
 
 export const updateEstado = async (id: string, dto: UpdateEstadoDto) => {
@@ -124,7 +133,14 @@ export const updateEstado = async (id: string, dto: UpdateEstadoDto) => {
   if (dto.estado === 'COMPLETADA' || dto.estado === 'CANCELADA' || dto.estado === 'PENDIENTE') {
     data.seguimientoChofer = 'NINGUNO'
   }
-  return prisma.ruta.update({ where: { id }, data, include: rutaInclude })
+  const updated = await prisma.ruta.update({ where: { id }, data, include: rutaInclude })
+  emitWebhookEventAsync('ruta.estado_updated', {
+    id: updated.id,
+    estado: updated.estado,
+    seguimientoChofer: updated.seguimientoChofer,
+    choferId: updated.choferId,
+  })
+  return updated
 }
 
 export const updateSeguimientoChofer = async (
@@ -152,11 +168,24 @@ export const updateSeguimientoChofer = async (
     // Ignorar si WS no está listo (tests / arranque)
   }
 
+  emitWebhookEventAsync('ruta.seguimiento_updated', {
+    id: updated.id,
+    seguimientoChofer: updated.seguimientoChofer,
+    estado: updated.estado,
+    choferId: updated.choferId,
+  })
+
   return updated
 }
 
 export const assignChofer = async (id: string, choferId: string) => {
   const chofer = await prisma.usuario.findUnique({ where: { id: choferId } })
   if (!chofer) throw new AppError(404, 'Chofer no encontrado')
-  return prisma.ruta.update({ where: { id }, data: { choferId }, include: rutaInclude })
+  const updated = await prisma.ruta.update({ where: { id }, data: { choferId }, include: rutaInclude })
+  emitWebhookEventAsync('ruta.chofer_assigned', {
+    id: updated.id,
+    choferId: updated.choferId,
+    estado: updated.estado,
+  })
+  return updated
 }
