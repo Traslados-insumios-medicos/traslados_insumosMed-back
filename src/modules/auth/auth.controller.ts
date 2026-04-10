@@ -39,11 +39,12 @@ export async function forgotPassword(req: Request, res: Response, next: NextFunc
     const result = await authUseCases.forgotPassword(dto)
     
     // Si hay un usuario, enviar email
-    if ('resetToken' in result && 'usuario' in result) {
+    const resetResult = result as { resetToken?: string; usuario?: { email: string; nombre: string } }
+    if (resetResult.resetToken && resetResult.usuario) {
       sendPasswordResetEmail({
-        to: result.usuario.email,
-        nombre: result.usuario.nombre,
-        resetToken: result.resetToken,
+        to: resetResult.usuario.email,
+        nombre: resetResult.usuario.nombre,
+        resetToken: resetResult.resetToken,
       }).catch((err) => {
         console.error('Error enviando email de recuperación:', err)
       })
