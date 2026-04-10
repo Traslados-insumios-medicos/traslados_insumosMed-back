@@ -43,7 +43,7 @@ async function main() {
   // Cliente principal de prueba
   const clientePrincipal = await prisma.cliente.upsert({
     where: { ruc: '1791234560001' },
-    update: { lat: -0.1807, lng: -78.4678 },
+    update: ({ lat: -0.1807, lng: -78.4678 } as unknown as Prisma.ClienteUncheckedUpdateInput),
     create: {
       nombre: 'CIMED S.A.',
       ruc: '1791234560001',
@@ -54,14 +54,14 @@ async function main() {
       emailContacto: 'logistica@cimed.ec',
       tipo: 'PRINCIPAL',
       activo: true,
-    },
+    } as unknown as Prisma.ClienteUncheckedCreateInput,
   })
   console.log('[OK] Cliente principal:', clientePrincipal.nombre)
 
   // Cliente secundario (punto de entrega)
   const clienteSecundario = await prisma.cliente.upsert({
     where: { ruc: '1791234560002' },
-    update: { lat: -0.2105, lng: -78.4896 },
+    update: ({ lat: -0.2105, lng: -78.4896 } as unknown as Prisma.ClienteUncheckedUpdateInput),
     create: {
       nombre: 'Metrored Hospital',
       ruc: '1791234560002',
@@ -73,7 +73,7 @@ async function main() {
       tipo: 'SECUNDARIO',
       clientePrincipalId: clientePrincipal.id,
       activo: true,
-    },
+    } as unknown as Prisma.ClienteUncheckedCreateInput,
   })
   console.log('[OK] Cliente secundario:', clienteSecundario.nombre)
 
@@ -104,7 +104,7 @@ async function main() {
 
   // Nuevos Clientes Reales en Quito
   const clinicaPichincha = await prisma.cliente.create({
-    data: {
+    data: ({
       nombre: 'Clínica Pichincha',
       ruc: '1791234560003',
       direccion: 'Calle Veintimilla E4-66 y Paez, Quito',
@@ -113,11 +113,11 @@ async function main() {
       telefonoContacto: '+593 2 256 2296',
       tipo: 'SECUNDARIO',
       activo: true,
-    }
+    } as unknown as Prisma.ClienteUncheckedCreateInput)
   })
 
   const hMetropolitano = await prisma.cliente.create({
-    data: {
+    data: ({
       nombre: 'Hospital Metropolitano',
       ruc: '1791234560004',
       direccion: 'Av. Mariana de Jesús y Nicolás Arteta, Quito',
@@ -126,7 +126,7 @@ async function main() {
       telefonoContacto: '+593 2 399 8000',
       tipo: 'SECUNDARIO',
       activo: true,
-    }
+    } as unknown as Prisma.ClienteUncheckedCreateInput)
   })
 
   // Ruta de demo: EN_CURSO, progreso parcial (2/4 guías entregadas) — útil para panel chofer/cliente sin “completada”
