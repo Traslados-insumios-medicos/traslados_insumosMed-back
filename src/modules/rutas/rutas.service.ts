@@ -1,10 +1,8 @@
 import crypto from 'crypto'
-import type { Prisma } from '@prisma/client'
 import { prisma } from '../../config/prisma'
 import { ensureRutaSeguimientoLogsTable, deleteRutasInTransaction } from '../../db/rutaHardDelete'
 import { AppError } from '../../utils/app-error'
 import { CreateRutaDto, UpdateEstadoDto, UpdateSeguimientoChoferDto } from './rutas.schema'
-import { EstadoSeguimientoChofer } from '@prisma/client'
 import { getIo } from '../../websocket'
 import { emitWebhookEventAsync } from '../webhooks/webhooks.service'
 
@@ -79,7 +77,7 @@ export const create = async (dto: CreateRutaDto) => {
   const timestamp = String(Date.now()).slice(-6)
   let guiaCounter = 0
 
-  const created = await prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx: any) => {
     // Create the ruta
     const ruta = await tx.ruta.create({
       data: {
@@ -135,13 +133,13 @@ export const create = async (dto: CreateRutaDto) => {
     fecha: created.fecha,
     estado: created.estado,
     choferId: created.choferId,
-    stops: created.stops.map((s) => ({ id: s.id, orden: s.orden, clienteId: s.clienteId })),
+    stops: created.stops.map((s: any) => ({ id: s.id, orden: s.orden, clienteId: s.clienteId })),
   })
   return created
 }
 
 export const updateEstado = async (id: string, dto: UpdateEstadoDto) => {
-  const data: Prisma.RutaUpdateInput = { estado: dto.estado }
+  const data: any = { estado: dto.estado }
   if (dto.estado === 'EN_CURSO') {
     data.seguimientoChofer = 'NINGUNO'
   }
@@ -170,7 +168,7 @@ export const updateSeguimientoChofer = async (
     throw new AppError(400, 'Solo puedes actualizar el seguimiento cuando la ruta está en curso')
   }
 
-  const seguimientoChofer = dto.seguimientoChofer as EstadoSeguimientoChofer
+  const seguimientoChofer = dto.seguimientoChofer
   const updated = await prisma.ruta.update({
     where: { id: rutaId },
     data: { seguimientoChofer },
@@ -215,7 +213,7 @@ export const getSeguimientoHistory = async (rutaId: string, limit = 100): Promis
     ORDER BY created_at DESC
     LIMIT ${max}
   `
-  return rows.map((r) => ({
+  return rows.map((r: any) => ({
     id: r.id,
     rutaId: r.ruta_id,
     choferId: r.chofer_id,
@@ -240,7 +238,7 @@ export const remove = async (id: string) => {
   const ruta = await prisma.ruta.findUnique({ where: { id }, select: { id: true, choferId: true, fecha: true } })
   if (!ruta) throw new AppError(404, 'Ruta no encontrada')
   await ensureRutaSeguimientoLogsTable()
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: any) => {
     await deleteRutasInTransaction(tx, [id])
   })
   emitWebhookEventAsync('ruta.deleted', {

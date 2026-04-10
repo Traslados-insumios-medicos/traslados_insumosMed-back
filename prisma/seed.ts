@@ -1,7 +1,6 @@
-import type { Prisma } from '@prisma/client'
-import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
+const { PrismaClient } = require('@prisma/client') as { PrismaClient: new () => any }
 const prisma = new PrismaClient()
 
 async function main() {
@@ -43,7 +42,7 @@ async function main() {
   // Cliente principal de prueba
   const clientePrincipal = await prisma.cliente.upsert({
     where: { ruc: '1791234560001' },
-    update: ({ lat: -0.1807, lng: -78.4678 } as unknown as Prisma.ClienteUncheckedUpdateInput),
+    update: { lat: -0.1807, lng: -78.4678 } as any,
     create: {
       nombre: 'CIMED S.A.',
       ruc: '1791234560001',
@@ -54,14 +53,14 @@ async function main() {
       emailContacto: 'logistica@cimed.ec',
       tipo: 'PRINCIPAL',
       activo: true,
-    } as unknown as Prisma.ClienteUncheckedCreateInput,
+    } as any,
   })
   console.log('[OK] Cliente principal:', clientePrincipal.nombre)
 
   // Cliente secundario (punto de entrega)
   const clienteSecundario = await prisma.cliente.upsert({
     where: { ruc: '1791234560002' },
-    update: ({ lat: -0.2105, lng: -78.4896 } as unknown as Prisma.ClienteUncheckedUpdateInput),
+    update: { lat: -0.2105, lng: -78.4896 } as any,
     create: {
       nombre: 'Metrored Hospital',
       ruc: '1791234560002',
@@ -73,7 +72,7 @@ async function main() {
       tipo: 'SECUNDARIO',
       clientePrincipalId: clientePrincipal.id,
       activo: true,
-    } as unknown as Prisma.ClienteUncheckedCreateInput,
+    } as any,
   })
   console.log('[OK] Cliente secundario:', clienteSecundario.nombre)
 
@@ -113,7 +112,7 @@ async function main() {
       telefonoContacto: '+593 2 256 2296',
       tipo: 'SECUNDARIO',
       activo: true,
-    } as unknown as Prisma.ClienteUncheckedCreateInput)
+    } as any)
   })
 
   const hMetropolitano = await prisma.cliente.create({
@@ -126,7 +125,7 @@ async function main() {
       telefonoContacto: '+593 2 399 8000',
       tipo: 'SECUNDARIO',
       activo: true,
-    } as unknown as Prisma.ClienteUncheckedCreateInput)
+    } as any)
   })
 
   // Ruta de demo: EN_CURSO, progreso parcial (2/4 guías entregadas) — útil para panel chofer/cliente sin “completada”
@@ -137,7 +136,7 @@ async function main() {
       choferId: chofer.id,
       estado: 'EN_CURSO',
       seguimientoChofer: 'EN_CAMINO',
-    } as unknown as Prisma.RutaUncheckedCreateInput,
+    } as any,
   })
 
   const stop1 = await prisma.stop.create({
