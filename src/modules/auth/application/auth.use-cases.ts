@@ -1,7 +1,8 @@
 import { IAuthRepository, ITokenService, IHashService } from '../domain/auth.port'
 import { AuthResult } from '../domain/auth.entity'
-import { LoginDto, RegisterDto, ChangePasswordDto } from '../auth.schema'
+import { LoginDto, RegisterDto, ChangePasswordDto, ForgotPasswordDto, ResetPasswordDto } from '../auth.schema'
 import { AppError } from '../../../utils/app-error'
+import { randomBytes } from 'crypto'
 
 export function generarPasswordTemporal(): string {
   const num = Math.floor(1000 + Math.random() * 9000)
@@ -88,7 +89,16 @@ export class AuthUseCases {
       { userId: usuario.id, rol: usuario.rol, clienteId: usuario.clienteId ?? undefined },
       this.jwtExpiresIn,
     )
-    return { token, usuario: { id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol } }
+    
+    return { 
+      token, 
+      usuario: { 
+        id: usuario.id, 
+        nombre: usuario.nombre, 
+        email: usuario.email, 
+        rol: usuario.rol 
+      } 
+    }
   }
 
   async me(userId: string) {
@@ -97,5 +107,38 @@ export class AuthUseCases {
       throw new AppError(404, 'Usuario no encontrado')
     }
     return usuario
+  }
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const usuario = await this.repo.findUserByEmail(dto.email.trim().toLowerCase())
+    if (!usuario) {
+      // Por seguridad, no revelamos si el email existe o no
+      return { message: 'Si el email existe, recibirás un enlace de recuperación' }
+    }
+
+    // Generar token único
+    const resetToken = randomBytes(32).toString('hex')
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000) // 1 hora
+
+    await this.repo.setResetToken(usuario.id, resetToken, resetTokenExpiry)
+
+    return { resetToken, usuario }
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const usuario = await this.repo.findUserByResetToken(dto.token)
+    if (!usuario || !usuario.resetTokenExpiry) {
+      throw new AppError(400, 'Token inválido o expirado')
+    }
+
+    if (new Date() > usuario.resetTokenExpiry) {
+      throw new AppError(400, 'Token expirado')
+    }
+
+    const nuevoHash = await this.hashService.hash(dto.passwordNueva)
+    await this.repo.updatePassword(usuario.id, nuevoHash)
+    await this.repo.clearResetToken(usuario.id)
+
+    return { message: 'Contraseña actualizada exitosamente' }
   }
 }
