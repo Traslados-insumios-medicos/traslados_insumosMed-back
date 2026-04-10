@@ -65,8 +65,11 @@ export const getAll = async (filters: GetAllFilters = {}) => {
   return { data, total, page, limit }
 }
 
-export const getById = (id: string) =>
-  prisma.ruta.findUniqueOrThrow({ where: { id }, include: rutaInclude })
+export const getById = async (id: string) => {
+  const ruta = await prisma.ruta.findUnique({ where: { id }, include: rutaInclude })
+  if (!ruta) throw new AppError(404, 'Ruta no encontrada')
+  return ruta
+}
 
 export const create = async (dto: CreateRutaDto) => {
   // Verify chofer exists
@@ -123,7 +126,9 @@ export const create = async (dto: CreateRutaDto) => {
     }
 
     // Return full ruta with includes
-    return tx.ruta.findUniqueOrThrow({ where: { id: ruta.id }, include: rutaInclude })
+    const fullRuta = await tx.ruta.findUnique({ where: { id: ruta.id }, include: rutaInclude })
+    if (!fullRuta) throw new AppError(404, 'Ruta no encontrada')
+    return fullRuta
   })
   emitWebhookEventAsync('ruta.created', {
     id: created.id,
