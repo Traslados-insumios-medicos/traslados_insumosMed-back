@@ -5,7 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
 }
 
 model Cliente {
@@ -30,19 +29,21 @@ model Cliente {
 }
 
 model Usuario {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   nombre             String
-  cedula             String?  @unique
-  email              String   @unique
+  cedula             String?   @unique
+  email              String    @unique
   password           String
   rol                Rol
-  activo             Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  activo             Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
   clienteId          String?
-  mustChangePassword Boolean  @default(false)
+  mustChangePassword Boolean   @default(false)
+  resetToken         String?   @unique
+  resetTokenExpiry   DateTime?
   rutas              Ruta[]
-  cliente            Cliente? @relation(fields: [clienteId], references: [id])
+  cliente            Cliente?  @relation(fields: [clienteId], references: [id])
 }
 
 model Ruta {

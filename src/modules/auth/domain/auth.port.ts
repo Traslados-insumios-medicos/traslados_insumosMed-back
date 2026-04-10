@@ -27,6 +27,14 @@ export interface IAuthRepository {
     mustChangePassword: boolean
   } | null>
 
+  findUserByResetToken(token: string): Promise<{
+    id: string
+    nombre: string
+    email: string
+    rol: string
+    resetTokenExpiry: Date | null
+  } | null>
+
   createUser(data: {
     nombre: string
     email: string
@@ -37,6 +45,8 @@ export interface IAuthRepository {
   }): Promise<{ id: string; nombre: string; email: string; rol: string }>
 
   updatePassword(userId: string, hashedPassword: string): Promise<void>
+  setResetToken(userId: string, token: string, expiry: Date): Promise<void>
+  clearResetToken(userId: string): Promise<void>
 }
 
 export interface ITokenService {

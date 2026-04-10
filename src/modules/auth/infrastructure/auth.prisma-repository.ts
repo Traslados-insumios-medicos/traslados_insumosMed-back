@@ -45,4 +45,25 @@ export class AuthPrismaRepository implements IAuthRepository {
       data: { password: hashedPassword, mustChangePassword: false },
     })
   }
+
+  async findUserByResetToken(token: string) {
+    return prisma.usuario.findUnique({
+      where: { resetToken: token },
+      select: { id: true, nombre: true, email: true, rol: true, resetTokenExpiry: true },
+    })
+  }
+
+  async setResetToken(userId: string, token: string, expiry: Date) {
+    await prisma.usuario.update({
+      where: { id: userId },
+      data: { resetToken: token, resetTokenExpiry: expiry },
+    })
+  }
+
+  async clearResetToken(userId: string) {
+    await prisma.usuario.update({
+      where: { id: userId },
+      data: { resetToken: null, resetTokenExpiry: null },
+    })
+  }
 }
