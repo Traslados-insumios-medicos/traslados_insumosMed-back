@@ -109,6 +109,12 @@ export class AuthUseCases {
     return usuario
   }
 
+  async updateProfile(userId: string, dto: { nombre?: string; cedula?: string }) {
+    const usuario = await this.repo.findUserById(userId)
+    if (!usuario) throw new AppError(404, 'Usuario no encontrado')
+    return this.repo.updateProfile(userId, dto)
+  }
+
   async forgotPassword(dto: ForgotPasswordDto) {
     const usuario = await this.repo.findUserByEmail(dto.email.trim().toLowerCase())
     if (!usuario) {

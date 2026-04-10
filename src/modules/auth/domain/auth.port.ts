@@ -20,12 +20,25 @@ export interface IAuthRepository {
   findUserById(id: string): Promise<{
     id: string
     nombre: string
+    cedula: string | null
     email: string
     rol: string
     clienteId: string | null
     activo: boolean
     mustChangePassword: boolean
+    createdAt: Date
   } | null>
+
+  updateProfile(userId: string, data: { nombre?: string; cedula?: string }): Promise<{
+    id: string
+    nombre: string
+    cedula: string | null
+    email: string
+    rol: string
+    clienteId: string | null
+    activo: boolean
+    createdAt: Date
+  }>
 
   findUserByResetToken(token: string): Promise<{
     id: string

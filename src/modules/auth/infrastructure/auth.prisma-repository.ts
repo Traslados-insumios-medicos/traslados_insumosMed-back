@@ -13,7 +13,15 @@ export class AuthPrismaRepository implements IAuthRepository {
   async findUserById(id: string) {
     return prisma.usuario.findUnique({
       where: { id },
-      select: { id: true, nombre: true, email: true, rol: true, clienteId: true, activo: true, mustChangePassword: true },
+      select: { id: true, nombre: true, cedula: true, email: true, rol: true, clienteId: true, activo: true, mustChangePassword: true, createdAt: true },
+    })
+  }
+
+  async updateProfile(userId: string, data: { nombre?: string; cedula?: string }) {
+    return prisma.usuario.update({
+      where: { id: userId },
+      data,
+      select: { id: true, nombre: true, cedula: true, email: true, rol: true, clienteId: true, activo: true, createdAt: true },
     })
   }
 
