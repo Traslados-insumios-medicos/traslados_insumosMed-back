@@ -29,6 +29,12 @@
   "homepage": "https://github.com/kevincatagnaclearminds-cell/translados-insumosMed-backend#readme",
   "dependencies": {
     "@prisma/client": "^5.22.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
+    "@types/node": "^25.5.2",
     "@types/pg": "^8.20.0",
     "@types/socket.io": "^3.0.1",
     "bcryptjs": "^3.0.3",
@@ -45,12 +51,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/multer": "^2.1.0",
-    "@types/node": "^25.5.2",
     "prisma": "^5.22.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^6.0.2"
