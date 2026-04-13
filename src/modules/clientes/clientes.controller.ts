@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { createClienteSchema, updateClienteSchema } from './clientes.schema'
 import * as svc from './clientes.service'
+import { emitRefresh } from '../../websocket'
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -18,24 +19,33 @@ export const getById = async (req: Request, res: Response, next: NextFunction) =
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const dto = createClienteSchema.parse(req.body)
-    res.status(201).json(await svc.create(dto))
+    const result = await svc.create(dto)
+    emitRefresh('clientes', req.headers['x-socket-id'] as string | undefined)
+    res.status(201).json(result)
   } catch (e) { next(e) }
 }
 
 export const update = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const dto = updateClienteSchema.parse(req.body)
-    res.json(await svc.update(req.params.id as string, dto))
+    const result = await svc.update(req.params.id as string, dto)
+    emitRefresh('clientes', req.headers['x-socket-id'] as string | undefined)
+    res.json(result)
   } catch (e) { next(e) }
 }
 
 export const toggleActivo = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await svc.toggleActivo(req.params.id as string)) } catch (e) { next(e) }
+  try {
+    const result = await svc.toggleActivo(req.params.id as string)
+    emitRefresh('clientes', req.headers['x-socket-id'] as string | undefined)
+    res.json(result)
+  } catch (e) { next(e) }
 }
 
 export const remove = async (req: Request, res: Response, next: NextFunction) => {
   try {
     await svc.remove(req.params.id as string)
+    emitRefresh('clientes', req.headers['x-socket-id'] as string | undefined)
     res.status(204).send()
   } catch (e) { next(e) }
 }

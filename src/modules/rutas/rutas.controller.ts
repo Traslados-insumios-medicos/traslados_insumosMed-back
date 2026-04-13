@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express'
 import { createRutaSchema, updateEstadoSchema, assignChoferSchema, updateSeguimientoChoferSchema } from './rutas.schema'
 import * as guiasSvc from '../guias/guias.service'
 import * as svc from './rutas.service'
+import { emitRefresh } from '../../websocket'
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -11,13 +12,14 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
     let choferId = req.query.choferId as string | undefined
     const fecha = req.query.fecha as string | undefined
     const estado = req.query.estado as string | undefined
+    const search = req.query.search as string | undefined
 
     // CHOFER role can only see their own routes
     if (req.user?.rol === 'CHOFER') {
       choferId = req.user.userId
     }
 
-    res.json(await svc.getAll({ choferId, fecha, estado, page, limit }))
+    res.json(await svc.getAll({ choferId, fecha, estado, search, page, limit }))
   } catch (e) { next(e) }
 }
 
@@ -50,7 +52,9 @@ export const getById = async (req: Request, res: Response, next: NextFunction) =
 export const create = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const dto = createRutaSchema.parse(req.body)
-    res.status(201).json(await svc.create(dto))
+    const result = await svc.create(dto)
+    emitRefresh('rutas')
+    res.status(201).json(result)
   } catch (e) { next(e) }
 }
 
@@ -62,7 +66,9 @@ export const updateEstado = async (req: Request, res: Response, next: NextFuncti
       res.status(403).json({ message: 'No tiene permisos para esta ruta' })
       return
     }
-    res.json(await svc.updateEstado(req.params.id as string, dto))
+    const result = await svc.updateEstado(req.params.id as string, dto)
+    emitRefresh('rutas')
+    res.json(result)
   } catch (e) { next(e) }
 }
 
@@ -109,13 +115,16 @@ export const getSeguimientoHistory = async (req: Request, res: Response, next: N
 export const assignChofer = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { choferId } = assignChoferSchema.parse(req.body)
-    res.json(await svc.assignChofer(req.params.id as string, choferId))
+    const result = await svc.assignChofer(req.params.id as string, choferId)
+    emitRefresh('rutas')
+    res.json(result)
   } catch (e) { next(e) }
 }
 
 export const remove = async (req: Request, res: Response, next: NextFunction) => {
   try {
     await svc.remove(req.params.id as string)
+    emitRefresh('rutas')
     res.status(204).send()
   } catch (e) {
     next(e)

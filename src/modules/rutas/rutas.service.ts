@@ -36,18 +36,50 @@ export interface GetAllFilters {
   choferId?: string
   fecha?: string
   estado?: string
+  search?: string
   page?: number
   limit?: number
 }
 
 export const getAll = async (filters: GetAllFilters = {}) => {
-  const { choferId, fecha, estado, page = 1, limit = 20 } = filters
+  const { choferId, fecha, estado, search, page = 1, limit = 20 } = filters
   const skip = (page - 1) * limit
 
-  const where: Record<string, unknown> = {}
+  const where: any = {}
   if (choferId) where.choferId = choferId
   if (fecha) where.fecha = fecha
   if (estado) where.estado = estado
+  
+  // Búsqueda en receptorNombre (guías) y nombre de clientes (stops)
+  if (search) {
+    where.OR = [
+      {
+        stops: {
+          some: {
+            cliente: {
+              nombre: { contains: search, mode: 'insensitive' }
+            }
+          }
+        }
+      },
+      {
+        stops: {
+          some: {
+            guias: {
+              some: {
+                receptorNombre: { contains: search, mode: 'insensitive' }
+              }
+            }
+          }
+        }
+      },
+      {
+        chofer: {
+          nombre: { contains: search, mode: 'insensitive' }
+        }
+      }
+    ]
+  }
 
   const [data, total] = await Promise.all([
     prisma.ruta.findMany({

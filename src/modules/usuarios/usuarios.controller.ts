@@ -4,6 +4,7 @@ import { updateUsuarioSchema } from './usuarios.schema'
 import * as svc from './usuarios.service'
 import { authUseCases } from '../auth/infrastructure/auth.container'
 import { Rol } from '@prisma/client'
+import { emitRefresh } from '../../websocket'
 
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -25,6 +26,7 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
   try {
     const dto = registerSchema.parse(req.body)
     const result = await authUseCases.register(dto)
+    emitRefresh('usuarios')
     res.status(201).json(result)
   } catch (e) { next(e) }
 }
@@ -32,17 +34,24 @@ export const create = async (req: Request, res: Response, next: NextFunction) =>
 export const update = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const dto = updateUsuarioSchema.parse(req.body)
-    res.json(await svc.update(req.params.id as string, dto))
+    const result = await svc.update(req.params.id as string, dto)
+    emitRefresh('usuarios')
+    res.json(result)
   } catch (e) { next(e) }
 }
 
 export const toggleActivo = async (req: Request, res: Response, next: NextFunction) => {
-  try { res.json(await svc.toggleActivo(req.params.id as string)) } catch (e) { next(e) }
+  try {
+    const result = await svc.toggleActivo(req.params.id as string)
+    emitRefresh('usuarios')
+    res.json(result)
+  } catch (e) { next(e) }
 }
 
 export const remove = async (req: Request, res: Response, next: NextFunction) => {
   try {
     await svc.remove(req.params.id as string)
+    emitRefresh('usuarios')
     res.status(204).send()
   } catch (e) { next(e) }
 }

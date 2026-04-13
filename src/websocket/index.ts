@@ -12,6 +12,15 @@ export function getIo(): Server {
   return ioRef
 }
 
+/** Emite un evento de refresco a todos los admins conectados. */
+export function emitRefresh(entity: 'clientes' | 'choferes' | 'rutas' | 'usuarios', sourceSocketId?: string) {
+  try {
+    getIo().to('admins').emit('db:refresh', { entity, sourceSocketId })
+  } catch {
+    // WS no inicializado aún
+  }
+}
+
 export function initWebSocket(httpServer: HttpServer) {
   const wsOrigin = env.NODE_ENV === 'development' ? true : env.FRONTEND_URLS
   const io = new Server(httpServer, {
