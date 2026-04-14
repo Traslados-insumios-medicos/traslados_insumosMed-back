@@ -7,7 +7,7 @@ import { emitRefresh } from '../../websocket'
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1)
-    const limit = Math.max(1, parseInt(req.query.limit as string) || 20)
+    const limit = Math.max(1, parseInt(req.query.limit as string) || 10)
 
     let choferId = req.query.choferId as string | undefined
     const fecha = req.query.fecha as string | undefined

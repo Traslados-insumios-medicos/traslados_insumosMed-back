@@ -9,7 +9,7 @@ const SELECT = {
   rol: true, activo: true, clienteId: true,
 }
 
-export const getAll = async (rol?: Rol, page = 1, limit = 20, activo?: boolean) => {
+export const getAll = async (rol?: Rol, page = 1, limit = 10, activo?: boolean) => {
   const where: Prisma.UsuarioWhereInput = {}
   if (rol) where.rol = rol
   if (activo !== undefined) where.activo = activo
@@ -37,11 +37,21 @@ export const update = (id: string, dto: UpdateUsuarioDto) =>
 
 export const toggleActivo = async (id: string) => {
   const u = await prisma.usuario.findUniqueOrThrow({ where: { id } })
-  return prisma.usuario.update({
+  const newActivo = !u.activo
+  const result = await prisma.usuario.update({
     where: { id },
-    data: { activo: !u.activo },
+    data: { activo: newActivo },
     select: { id: true, nombre: true, activo: true },
   })
+  
+  // Si se desactivó, emitir evento WebSocket para desconectar al usuario
+  if (!newActivo) {
+    console.log(`🔴 Usuario ${u.nombre} (${id}) desactivado - emitiendo evento WebSocket`)
+    const { emitAccountDeactivated } = await import('../../websocket')
+    emitAccountDeactivated(id)
+  }
+  
+  return result
 }
 
 export const remove = async (id: string) => {

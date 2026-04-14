@@ -10,9 +10,12 @@ const clienteInclude = {
   clientesSecundarios: { select: { id: true, nombre: true, ruc: true, activo: true, direccion: true, lat: true, lng: true } },
 } satisfies Prisma.ClienteInclude
 
-export const getAll = async (page = 1, limit = 20, tipo?: TipoCliente) => {
+export const getAll = async (page = 1, limit = 10, tipo?: TipoCliente, activo?: boolean) => {
   const skip = (page - 1) * limit
-  const where: Prisma.ClienteWhereInput = tipo ? { tipo } : {}
+  const where: Prisma.ClienteWhereInput = {}
+  if (tipo) where.tipo = tipo
+  if (activo !== undefined) where.activo = activo
+  
   const [data, total] = await Promise.all([
     prisma.cliente.findMany({ where, include: clienteInclude, orderBy: { nombre: 'asc' }, skip, take: limit }),
     prisma.cliente.count({ where }),
@@ -60,6 +63,31 @@ export const update = async (id: string, dto: UpdateClienteDto) => {
     if (existingNombre) throw new AppError(409, `Ya existe otro cliente con el nombre "${dto.nombre}"`)
   }
 
+  // Validar RUC único si se está actualizando
+  if (dto.ruc) {
+    const existingRuc = await prisma.cliente.findFirst({ 
+      where: { 
+        ruc: dto.ruc,
+        NOT: { id }
+      } 
+    })
+    if (existingRuc) throw new AppError(409, `Ya existe otro cliente con el RUC ${dto.ruc}`)
+  }
+
+  // Detectar cambio de PRINCIPAL a SECUNDARIO para eliminar usuario de acceso
+  if (dto.tipo === 'SECUNDARIO') {
+    const currentCliente = await prisma.cliente.findUnique({ where: { id } })
+    if (currentCliente && currentCliente.tipo === 'PRINCIPAL') {
+      // Eliminar usuario de acceso asociado
+      await prisma.usuario.deleteMany({
+        where: {
+          clienteId: id,
+          rol: Rol.CLIENTE
+        }
+      })
+    }
+  }
+
   const updated = await prisma.cliente.update({ where: { id }, data: dto as Prisma.ClienteUpdateInput, include: clienteInclude })
   emitWebhookEventAsync('cliente.updated', {
     id: updated.id,
@@ -73,7 +101,37 @@ export const update = async (id: string, dto: UpdateClienteDto) => {
 
 export const toggleActivo = async (id: string) => {
   const cliente = await prisma.cliente.findUniqueOrThrow({ where: { id } })
-  const updated = await prisma.cliente.update({ where: { id }, data: { activo: !cliente.activo }, include: clienteInclude })
+  const newActivo = !cliente.activo
+  
+  const updated = await prisma.cliente.update({ 
+    where: { id }, 
+    data: { activo: newActivo }, 
+    include: clienteInclude 
+  })
+  
+  // Si es un cliente PRINCIPAL, también actualizar el estado del usuario asociado
+  if (cliente.tipo === 'PRINCIPAL') {
+    const usuario = await prisma.usuario.findFirst({
+      where: {
+        clienteId: id,
+        rol: Rol.CLIENTE
+      }
+    })
+    
+    if (usuario) {
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { activo: newActivo }
+      })
+      
+      // Si se desactivó, emitir evento WebSocket para desconectar al usuario
+      if (!newActivo) {
+        const { emitAccountDeactivated } = await import('../../websocket')
+        emitAccountDeactivated(usuario.id)
+      }
+    }
+  }
+  
   emitWebhookEventAsync('cliente.activo_toggled', {
     id: updated.id,
     nombre: updated.nombre,

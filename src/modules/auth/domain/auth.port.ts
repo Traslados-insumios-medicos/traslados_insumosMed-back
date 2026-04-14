@@ -57,9 +57,19 @@ export interface IAuthRepository {
     clienteId?: string
   }): Promise<{ id: string; nombre: string; email: string; rol: string }>
 
+  updateUser(userId: string, data: {
+    nombre?: string
+    clienteId?: string | null
+    password?: string
+    activo?: boolean
+    mustChangePassword?: boolean
+  }): Promise<{ id: string; nombre: string; email: string; rol: string }>
+
   updatePassword(userId: string, hashedPassword: string): Promise<void>
   setResetToken(userId: string, token: string, expiry: Date): Promise<void>
   clearResetToken(userId: string): Promise<void>
+  updateActiveSessionToken(userId: string, sessionToken: string): Promise<void>
+  validateSessionToken(userId: string, sessionToken: string): Promise<boolean>
 }
 
 export interface ITokenService {

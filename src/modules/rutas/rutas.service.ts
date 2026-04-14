@@ -42,7 +42,7 @@ export interface GetAllFilters {
 }
 
 export const getAll = async (filters: GetAllFilters = {}) => {
-  const { choferId, fecha, estado, search, page = 1, limit = 20 } = filters
+  const { choferId, fecha, estado, search, page = 1, limit = 10 } = filters
   const skip = (page - 1) * limit
 
   const where: any = {}

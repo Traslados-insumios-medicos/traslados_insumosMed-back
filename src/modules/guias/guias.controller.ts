@@ -33,7 +33,7 @@ export const getMisEnvios = async (req: Request, res: Response, next: NextFuncti
     }
 
     const page = Math.max(1, parseInt(String(req.query.page), 10) || 1)
-    const limit = Math.max(1, Math.min(100, parseInt(String(req.query.limit), 10) || 20))
+    const limit = Math.max(1, Math.min(100, parseInt(String(req.query.limit), 10) || 10))
     const search = typeof req.query.search === 'string' ? req.query.search : undefined
     const rawVista = typeof req.query.vista === 'string' ? req.query.vista : 'todos'
     const vista: VistaMisEnvios = ['activos', 'historial', 'todos'].includes(rawVista)

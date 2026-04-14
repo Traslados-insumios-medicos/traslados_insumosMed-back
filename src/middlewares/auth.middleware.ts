@@ -8,6 +8,7 @@ export interface JwtPayload {
   userId: string
   rol: Rol
   clienteId?: string
+  sessionToken?: string
 }
 
 declare global {
@@ -30,7 +31,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload
     const user = await prisma.usuario.findUnique({
       where: { id: payload.userId },
-      select: { activo: true },
+      select: { activo: true, activeSessionToken: true },
     })
     if (!user) {
       res.status(401).json({ message: 'Usuario no encontrado' })
@@ -40,6 +41,13 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       res.status(403).json({ message: 'Su acceso está inactivo. Contacte al administrador de la empresa.' })
       return
     }
+    
+    // Validar que el token de sesión coincida con el almacenado en la base de datos
+    if (payload.sessionToken && user.activeSessionToken !== payload.sessionToken) {
+      res.status(401).json({ message: 'Su sesión ha expirado. Otra sesión ha sido iniciada con esta cuenta.' })
+      return
+    }
+    
     req.user = payload
     next()
   } catch {

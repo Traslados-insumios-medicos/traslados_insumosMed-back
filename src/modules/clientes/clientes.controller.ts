@@ -6,9 +6,10 @@ import { emitRefresh } from '../../websocket'
 export const getAll = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1)
-    const limit = Math.max(1, parseInt(req.query.limit as string) || 20)
+    const limit = Math.max(1, parseInt(req.query.limit as string) || 10)
     const tipo = req.query.tipo as 'PRINCIPAL' | 'SECUNDARIO' | undefined
-    res.json(await svc.getAll(page, limit, tipo))
+    const activo = req.query.activo === 'true' ? true : req.query.activo === 'false' ? false : undefined
+    res.json(await svc.getAll(page, limit, tipo, activo))
   } catch (e) { next(e) }
 }
 

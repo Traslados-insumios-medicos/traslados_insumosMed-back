@@ -1,6 +1,6 @@
+import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
-const { PrismaClient } = require('@prisma/client') as { PrismaClient: new () => any }
 const prisma = new PrismaClient()
 
 async function main() {
@@ -26,7 +26,7 @@ async function main() {
   const choferPassword = await bcrypt.hash('Medlogix1234!', 10)
   const chofer = await prisma.usuario.upsert({
     where: { email: 'chofer@medlogix.ec' },
-    update: { password: choferPassword, activo: true, mustChangePassword: false },
+    update: {},
     create: {
       nombre: 'Carlos Pérez',
       email: 'chofer@medlogix.ec',
@@ -42,37 +42,30 @@ async function main() {
   // Cliente principal de prueba
   const clientePrincipal = await prisma.cliente.upsert({
     where: { ruc: '1791234560001' },
-    update: { lat: -0.1807, lng: -78.4678 } as any,
+    update: {},
     create: {
       nombre: 'CIMED S.A.',
       ruc: '1791234560001',
       direccion: 'Av. Amazonas N39-123, Quito',
-      lat: -0.1807,
-      lng: -78.4678,
       telefonoContacto: '+593 2 123 4567',
       emailContacto: 'logistica@cimed.ec',
-      tipo: 'PRINCIPAL',
       activo: true,
-    } as any,
+    },
   })
   console.log('[OK] Cliente principal:', clientePrincipal.nombre)
 
   // Cliente secundario (punto de entrega)
   const clienteSecundario = await prisma.cliente.upsert({
     where: { ruc: '1791234560002' },
-    update: { lat: -0.2105, lng: -78.4896 } as any,
+    update: {},
     create: {
       nombre: 'Metrored Hospital',
       ruc: '1791234560002',
       direccion: 'Av. 10 de Agosto N25-45, Quito',
-      lat: -0.2105,
-      lng: -78.4896,
       telefonoContacto: '+593 2 234 5678',
       emailContacto: 'bodega@metrored.ec',
-      tipo: 'SECUNDARIO',
-      clientePrincipalId: clientePrincipal.id,
       activo: true,
-    } as any,
+    },
   })
   console.log('[OK] Cliente secundario:', clienteSecundario.nombre)
 
@@ -103,51 +96,40 @@ async function main() {
 
   // Nuevos Clientes Reales en Quito
   const clinicaPichincha = await prisma.cliente.create({
-    data: ({
+    data: {
       nombre: 'Clínica Pichincha',
       ruc: '1791234560003',
       direccion: 'Calle Veintimilla E4-66 y Paez, Quito',
-      lat: -0.2013,
-      lng: -78.4947,
       telefonoContacto: '+593 2 256 2296',
-      tipo: 'SECUNDARIO',
       activo: true,
-    } as any)
+    }
   })
 
   const hMetropolitano = await prisma.cliente.create({
-    data: ({
+    data: {
       nombre: 'Hospital Metropolitano',
       ruc: '1791234560004',
       direccion: 'Av. Mariana de Jesús y Nicolás Arteta, Quito',
-      lat: -0.1878,
-      lng: -78.4984,
       telefonoContacto: '+593 2 399 8000',
-      tipo: 'SECUNDARIO',
       activo: true,
-    } as any)
+    }
   })
 
-  // Ruta de demo: EN_CURSO, progreso parcial (2/4 guías entregadas) — útil para panel chofer/cliente sin “completada”
+  // Crear Ruta de prueba realista para Carlos (Chofer)
   const fechaHoy = new Date().toISOString().split('T')[0]
   const rutaRealista = await prisma.ruta.create({
-    data: {
-      fecha: fechaHoy,
-      choferId: chofer.id,
-      estado: 'EN_CURSO',
-      seguimientoChofer: 'EN_CAMINO',
-    } as any,
+    data: { fecha: fechaHoy, choferId: chofer.id, estado: 'PENDIENTE' }
   })
 
   const stop1 = await prisma.stop.create({
     data: { orden: 1, direccion: clienteSecundario.direccion, lat: -0.180653, lng: -78.467834, clienteId: clienteSecundario.id, rutaId: rutaRealista.id, notas: 'Acceso por puerta posterior (bodega)' }
   })
-  await prisma.guiaEntrega.create({ data: { numeroGuia: 'G-10001', descripcion: 'Insumos Quirúrgicos - Cajas x5', estado: 'ENTREGADO', clienteId: clienteSecundario.id, rutaId: rutaRealista.id, stopId: stop1.id } })
+  await prisma.guiaEntrega.create({ data: { numeroGuia: 'G-10001', descripcion: 'Insumos Quirúrgicos - Cajas x5', estado: 'PENDIENTE', clienteId: clienteSecundario.id, rutaId: rutaRealista.id, stopId: stop1.id } })
 
   const stop2 = await prisma.stop.create({
     data: { orden: 2, direccion: clinicaPichincha.direccion, lat: -0.2013, lng: -78.4947, clienteId: clinicaPichincha.id, rutaId: rutaRealista.id, notas: 'Entrega urgente en Recepción Médica' }
   })
-  await prisma.guiaEntrega.create({ data: { numeroGuia: 'G-10002', descripcion: 'Material Desechable - Guantes y Mascarillas', estado: 'ENTREGADO', clienteId: clinicaPichincha.id, rutaId: rutaRealista.id, stopId: stop2.id } })
+  await prisma.guiaEntrega.create({ data: { numeroGuia: 'G-10002', descripcion: 'Material Desechable - Guantes y Mascarillas', estado: 'PENDIENTE', clienteId: clinicaPichincha.id, rutaId: rutaRealista.id, stopId: stop2.id } })
 
   const stop3 = await prisma.stop.create({
     data: { orden: 3, direccion: hMetropolitano.direccion, lat: -0.1878, lng: -78.4984, clienteId: hMetropolitano.id, rutaId: rutaRealista.id, notas: 'Hablar con el encargado general logístico' }
@@ -159,9 +141,9 @@ async function main() {
     ]
   })
 
-  console.log('[OK] Ruta demo en curso (50% guías) para', chofer.nombre, '- Ruta:', rutaRealista.id)
+  console.log('[OK] Ruta realista múltiple creada para Chofer:', chofer.nombre, '- ID Ruta:', rutaRealista.id)
 
-  console.log('\n[OK] Seed completado. Ruta Carlos: EN_CURSO · 2/4 guías entregadas · seguimiento EN_CAMINO.')
+  console.log('\n[OK] Seed completado. ¡Datos reales en Quito insertados!')
   console.log('─────────────────────────────')
   console.log('Admin    → admin@medlogix.ec    / Admin1234!')
   console.log('Chofer   → chofer@medlogix.ec   / Medlogix1234!')
@@ -172,3 +154,8 @@ async function main() {
 main()
   .catch((e) => { console.error(e); process.exit(1) })
   .finally(() => prisma.$disconnect())
+
+
+
+
+  
