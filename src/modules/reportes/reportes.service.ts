@@ -19,7 +19,27 @@ export async function dashboard() {
       prisma.novedad.findMany({
         take: 5,
         orderBy: { createdAt: 'desc' },
-        include: { guia: { select: { numeroGuia: true, clienteId: true } } },
+        include: { 
+          guia: { 
+            select: { 
+              numeroGuia: true, 
+              clienteId: true,
+              receptorNombre: true,
+              ruta: {
+                select: {
+                  id: true,
+                  fecha: true,
+                  chofer: { select: { nombre: true } }
+                }
+              },
+              stop: {
+                select: {
+                  cliente: { select: { nombre: true } }
+                }
+              }
+            } 
+          } 
+        },
       }),
     ])
 
@@ -46,11 +66,22 @@ export async function dashboard() {
   }
 }
 
-export async function reportePorCliente() {
+export async function reportePorCliente(filters?: { clienteId?: string; desde?: string; hasta?: string }) {
   const clientes = await prisma.cliente.findMany({
+    where: {
+      ...(filters?.clienteId ? { id: filters.clienteId } : {})
+    },
     include: {
       guias: {
-        select: { id: true, estado: true, receptorNombre: true },
+        select: { id: true, estado: true, receptorNombre: true, createdAt: true },
+        where: {
+          ...(filters?.desde || filters?.hasta ? {
+            createdAt: {
+              ...(filters.desde ? { gte: new Date(filters.desde) } : {}),
+              ...(filters.hasta ? { lte: new Date(filters.hasta + 'T23:59:59') } : {}),
+            }
+          } : {})
+        }
       },
     },
   })
@@ -65,11 +96,19 @@ export async function reportePorCliente() {
   }))
 }
 
-export async function reportePorChofer(choferId?: string) {
+export async function reportePorChofer(filters?: { choferId?: string; desde?: string; hasta?: string }) {
   const choferes = await prisma.usuario.findMany({
-    where: { rol: 'CHOFER', ...(choferId ? { id: choferId } : {}) },
+    where: { rol: 'CHOFER', ...(filters?.choferId ? { id: filters.choferId } : {}) },
     include: {
       rutas: {
+        where: {
+          ...(filters?.desde || filters?.hasta ? {
+            fecha: {
+              ...(filters.desde ? { gte: filters.desde } : {}),
+              ...(filters.hasta ? { lte: filters.hasta } : {}),
+            }
+          } : {})
+        },
         include: {
           stops: { include: { cliente: true } },
           guias: {

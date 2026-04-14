@@ -2,7 +2,28 @@ import { prisma } from '../../config/prisma'
 import { CreateNovedadDto, CreateSeguimientoDto } from './novedades.schema'
 
 const novedadInclude = {
-  guia: { select: { id: true, numeroGuia: true, clienteId: true } },
+  guia: { 
+    select: { 
+      id: true, 
+      numeroGuia: true, 
+      clienteId: true,
+      descripcion: true,
+      estado: true,
+      receptorNombre: true,
+      ruta: {
+        select: {
+          id: true,
+          fecha: true,
+          chofer: { select: { nombre: true } }
+        }
+      },
+      stop: {
+        select: {
+          cliente: { select: { nombre: true } }
+        }
+      }
+    } 
+  },
   seguimientos: { orderBy: { createdAt: 'asc' as const } },
 }
 
