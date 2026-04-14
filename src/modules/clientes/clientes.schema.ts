@@ -6,8 +6,8 @@ export const createClienteSchema = z.object({
   direccion: z.string().min(1),
   lat: z.number().optional(),
   lng: z.number().optional(),
-  telefonoContacto: z.string().regex(/^\d{10}$/, 'El teléfono debe tener exactamente 10 dígitos').optional().or(z.literal('')),
-  emailContacto: z.string().regex(/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/, 'El email debe contener @, dominio y extensión válida (ej. usuario@empresa.com)').optional().or(z.literal('')),
+  telefonoContacto: z.string().regex(/^\d{10}$/, 'El teléfono debe tener exactamente 10 dígitos'),
+  emailContacto: z.string().regex(/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/, 'El email debe contener @, dominio y extensión válida (ej. usuario@empresa.com)'),
   tipo: z.enum(['PRINCIPAL', 'SECUNDARIO']).default('SECUNDARIO'),
   clientePrincipalId: z.string().optional(),
 })

@@ -89,7 +89,7 @@ function buildWhereMisEnvios(
 }
 
 export async function getMisEnviosList(q: MisEnviosQuery) {
-  const { clienteUsuarioId, search, page = 1, limit = 20, vista = 'todos' } = q
+  const { clienteUsuarioId, search, page = 1, limit = 10, vista = 'todos' } = q
   const alcance = await resolveAlcanceClienteIds(clienteUsuarioId)
   const take = Math.max(1, Math.min(100, limit))
   const skip = (Math.max(1, page) - 1) * take

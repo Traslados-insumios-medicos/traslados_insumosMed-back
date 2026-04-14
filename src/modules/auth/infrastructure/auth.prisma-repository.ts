@@ -47,6 +47,20 @@ export class AuthPrismaRepository implements IAuthRepository {
     })
   }
 
+  async updateUser(userId: string, data: {
+    nombre?: string
+    clienteId?: string | null
+    password?: string
+    activo?: boolean
+    mustChangePassword?: boolean
+  }) {
+    return prisma.usuario.update({
+      where: { id: userId },
+      data,
+      select: { id: true, nombre: true, email: true, rol: true },
+    })
+  }
+
   async updatePassword(userId: string, hashedPassword: string) {
     await prisma.usuario.update({
       where: { id: userId },
@@ -73,5 +87,20 @@ export class AuthPrismaRepository implements IAuthRepository {
       where: { id: userId },
       data: { resetToken: null, resetTokenExpiry: null },
     })
+  }
+
+  async updateActiveSessionToken(userId: string, sessionToken: string) {
+    await prisma.usuario.update({
+      where: { id: userId },
+      data: { activeSessionToken: sessionToken },
+    })
+  }
+
+  async validateSessionToken(userId: string, sessionToken: string): Promise<boolean> {
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: userId },
+      select: { activeSessionToken: true },
+    })
+    return usuario?.activeSessionToken === sessionToken
   }
 }

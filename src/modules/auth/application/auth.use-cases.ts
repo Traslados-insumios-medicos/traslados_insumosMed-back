@@ -32,8 +32,20 @@ export class AuthUseCases {
       throw new AppError(401, 'Credenciales inválidas')
     }
 
+    // Generar nuevo token de sesión único
+    const sessionToken = randomBytes(32).toString('hex')
+    
+    // Actualizar el token de sesión activa en la base de datos
+    // Esto invalidará cualquier sesión anterior
+    await this.repo.updateActiveSessionToken(usuario.id, sessionToken)
+
     const token = this.tokenService.sign(
-      { userId: usuario.id, rol: usuario.rol, clienteId: usuario.clienteId ?? undefined },
+      { 
+        userId: usuario.id, 
+        rol: usuario.rol, 
+        clienteId: usuario.clienteId ?? undefined,
+        sessionToken // Incluir el token de sesión en el JWT
+      },
       this.jwtExpiresIn,
     )
 
@@ -52,7 +64,27 @@ export class AuthUseCases {
 
   async register(dto: RegisterDto) {
     const existe = await this.repo.findUserByEmail(dto.email)
+    
+    // Si existe un usuario con ese email
     if (existe) {
+      // Si es un usuario CLIENTE sin clienteId (desvinculado), reactivarlo
+      if (dto.rol === 'CLIENTE' && existe.rol === 'CLIENTE' && !existe.clienteId && dto.clienteId) {
+        const passwordTemporal = generarPasswordTemporal()
+        const hashedPassword = await this.hashService.hash(passwordTemporal)
+        
+        // Actualizar el usuario existente con los nuevos datos
+        const usuarioActualizado = await this.repo.updateUser(existe.id, {
+          nombre: dto.nombre,
+          clienteId: dto.clienteId,
+          password: hashedPassword,
+          activo: true,
+          mustChangePassword: true,
+        })
+        
+        return { usuario: usuarioActualizado, passwordTemporal }
+      }
+      
+      // En cualquier otro caso, rechazar
       throw new AppError(409, 'Ya existe un usuario con ese email')
     }
 
@@ -85,8 +117,17 @@ export class AuthUseCases {
     const nuevoHash = await this.hashService.hash(dto.passwordNueva)
     await this.repo.updatePassword(userId, nuevoHash)
 
+    // Generar nuevo token de sesión al cambiar contraseña
+    const sessionToken = randomBytes(32).toString('hex')
+    await this.repo.updateActiveSessionToken(userId, sessionToken)
+
     const token = this.tokenService.sign(
-      { userId: usuario.id, rol: usuario.rol, clienteId: usuario.clienteId ?? undefined },
+      { 
+        userId: usuario.id, 
+        rol: usuario.rol, 
+        clienteId: usuario.clienteId ?? undefined,
+        sessionToken
+      },
       this.jwtExpiresIn,
     )
     

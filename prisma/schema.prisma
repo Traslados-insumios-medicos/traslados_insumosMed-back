@@ -42,6 +42,7 @@ model Usuario {
   mustChangePassword Boolean   @default(false)
   resetToken         String?   @unique
   resetTokenExpiry   DateTime?
+  activeSessionToken String?   @unique
   rutas              Ruta[]
   cliente            Cliente?  @relation(fields: [clienteId], references: [id])
 }

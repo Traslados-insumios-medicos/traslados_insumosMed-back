@@ -10,7 +10,7 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
   try {
     const rol = req.query.rol as Rol | undefined
     const page = Math.max(1, parseInt(req.query.page as string) || 1)
-    const limit = Math.max(1, parseInt(req.query.limit as string) || 20)
+    const limit = Math.max(1, parseInt(req.query.limit as string) || 10)
     let activo: boolean | undefined
     if (req.query.activo === 'true') activo = true
     else if (req.query.activo === 'false') activo = false
