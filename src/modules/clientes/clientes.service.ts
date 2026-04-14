@@ -27,6 +27,10 @@ export const create = async (dto: CreateClienteDto) => {
   const existing = await prisma.cliente.findUnique({ where: { ruc: dto.ruc } })
   if (existing) throw new AppError(409, `Ya existe un cliente con el RUC ${dto.ruc}`)
 
+  // Validar nombre único
+  const existingNombre = await prisma.cliente.findFirst({ where: { nombre: dto.nombre } })
+  if (existingNombre) throw new AppError(409, `Ya existe un cliente con el nombre "${dto.nombre}"`)
+
   if (dto.tipo === 'SECUNDARIO' && dto.clientePrincipalId) {
     const principal = await prisma.cliente.findUnique({ where: { id: dto.clientePrincipalId } })
     if (!principal) throw new AppError(404, 'Cliente principal no encontrado')
@@ -45,6 +49,17 @@ export const create = async (dto: CreateClienteDto) => {
 }
 
 export const update = async (id: string, dto: UpdateClienteDto) => {
+  // Validar nombre único si se está actualizando
+  if (dto.nombre) {
+    const existingNombre = await prisma.cliente.findFirst({ 
+      where: { 
+        nombre: dto.nombre,
+        NOT: { id }
+      } 
+    })
+    if (existingNombre) throw new AppError(409, `Ya existe otro cliente con el nombre "${dto.nombre}"`)
+  }
+
   const updated = await prisma.cliente.update({ where: { id }, data: dto as Prisma.ClienteUpdateInput, include: clienteInclude })
   emitWebhookEventAsync('cliente.updated', {
     id: updated.id,
