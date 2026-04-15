@@ -76,7 +76,7 @@ export function initWebSocket(httpServer: HttpServer) {
 
   io.on('connection', (socket) => {
     const user = socket.data.user as JwtPayload
-    console.log(`✅ Usuario conectado: ${user.nombre} (${user.userId}) - Socket: ${socket.id}`)
+    console.log(`✅ Usuario conectado: ${user.userId} (${user.rol}) - Socket: ${socket.id}`)
 
     // Unirse a la sala de una ruta
     socket.on('join:ruta', (rutaId: string) => {
@@ -111,7 +111,7 @@ export function initWebSocket(httpServer: HttpServer) {
     }
 
     socket.on('disconnect', () => {
-      console.log(`❌ Usuario desconectado: ${user.nombre} (${user.userId}) - Socket: ${socket.id}`)
+      console.log(`❌ Usuario desconectado: ${user.userId} (${user.rol}) - Socket: ${socket.id}`)
     })
   })
 

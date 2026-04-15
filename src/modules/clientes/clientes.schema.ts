@@ -12,7 +12,7 @@ export const createClienteSchema = z.object({
   clientePrincipalId: z.string().optional(),
 })
 
-export const updateClienteSchema = createClienteSchema.omit({ ruc: true }).partial().extend({
+export const updateClienteSchema = createClienteSchema.partial().extend({
   clientePrincipalId: z.union([z.string().min(1), z.null()]).optional(),
 })
 
