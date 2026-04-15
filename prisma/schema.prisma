@@ -167,6 +167,5 @@ enum TipoCliente {
 enum EstadoSeguimientoChofer {
   NINGUNO
   EN_CAMINO
-  EN_TRAFICO
   CERCA_DESTINO
 }

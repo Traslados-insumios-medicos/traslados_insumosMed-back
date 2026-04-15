@@ -66,12 +66,16 @@ export async function dashboard() {
   }
 }
 
-export async function reportePorCliente(filters?: { clienteId?: string; desde?: string; hasta?: string }) {
+export async function reportePorCliente(filters?: { clienteId?: string; desde?: string; hasta?: string; tipo?: string }) {
   const clientes = await prisma.cliente.findMany({
     where: {
-      ...(filters?.clienteId ? { id: filters.clienteId } : {})
+      ...(filters?.clienteId ? { id: filters.clienteId } : {}),
+      ...(filters?.tipo ? { tipo: filters.tipo as 'PRINCIPAL' | 'SECUNDARIO' } : {})
     },
     include: {
+      clientePrincipal: {
+        select: { nombre: true }
+      },
       guias: {
         select: { id: true, estado: true, receptorNombre: true, createdAt: true },
         where: {
@@ -89,6 +93,8 @@ export async function reportePorCliente(filters?: { clienteId?: string; desde?: 
   return clientes.map((c) => ({
     clienteId: c.id,
     nombre: c.nombre,
+    tipo: c.tipo,
+    clientePrincipal: c.clientePrincipal,
     total: c.guias.length,
     entregados: c.guias.filter((g) => g.estado === 'ENTREGADO').length,
     pendientes: c.guias.filter((g) => g.estado === 'PENDIENTE').length,

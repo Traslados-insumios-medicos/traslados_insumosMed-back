@@ -10,7 +10,8 @@ export const porCliente = async (req: Request, res: Response, next: NextFunction
     const clienteId = req.query.clienteId as string | undefined
     const desde = req.query.desde as string | undefined
     const hasta = req.query.hasta as string | undefined
-    res.json(await svc.reportePorCliente({ clienteId, desde, hasta })) 
+    const tipo = req.query.tipo as string | undefined
+    res.json(await svc.reportePorCliente({ clienteId, desde, hasta, tipo })) 
   } catch (e) { next(e) }
 }
 

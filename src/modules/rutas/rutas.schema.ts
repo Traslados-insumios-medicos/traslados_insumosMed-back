@@ -31,7 +31,7 @@ export const assignChoferSchema = z.object({
 })
 
 export const updateSeguimientoChoferSchema = z.object({
-  seguimientoChofer: z.enum(['EN_CAMINO', 'EN_TRAFICO', 'CERCA_DESTINO']),
+  seguimientoChofer: z.enum(['EN_CAMINO', 'CERCA_DESTINO']),
 })
 
 export type CreateRutaDto = z.infer<typeof createRutaSchema>
