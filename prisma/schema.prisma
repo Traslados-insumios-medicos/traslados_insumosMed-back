@@ -32,6 +32,7 @@ model Usuario {
   id                 String    @id @default(cuid())
   nombre             String
   cedula             String?   @unique
+  celular            String?   @unique
   email              String    @unique
   password           String
   rol                Rol

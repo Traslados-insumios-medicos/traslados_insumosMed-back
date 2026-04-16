@@ -10,6 +10,10 @@ export class AuthPrismaRepository implements IAuthRepository {
     return prisma.usuario.findUnique({ where: { email } })
   }
 
+  async findUserByCelular(celular: string) {
+    return prisma.usuario.findUnique({ where: { celular } })
+  }
+
   async findUserById(id: string) {
     return prisma.usuario.findUnique({
       where: { id },

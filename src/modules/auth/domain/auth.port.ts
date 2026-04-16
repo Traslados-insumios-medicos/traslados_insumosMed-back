@@ -17,6 +17,17 @@ export interface IAuthRepository {
     mustChangePassword: boolean
   } | null>
 
+  findUserByCelular(celular: string): Promise<{
+    id: string
+    nombre: string
+    email: string
+    password: string
+    rol: string
+    clienteId: string | null
+    activo: boolean
+    mustChangePassword: boolean
+  } | null>
+
   findUserById(id: string): Promise<{
     id: string
     nombre: string
