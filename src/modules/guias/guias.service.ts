@@ -76,9 +76,14 @@ function buildWhereMisEnvios(
 
   if (vista === 'activos') {
     parts.push({
-      OR: [
-        { estado: { in: ['PENDIENTE', 'INCIDENCIA'] } },
-        { ruta: { estado: 'EN_CURSO' } },
+      AND: [
+        { estado: { notIn: ['ENTREGADO'] } }, // Excluir guías ya entregadas
+        {
+          OR: [
+            { estado: { in: ['PENDIENTE', 'INCIDENCIA'] } },
+            { ruta: { estado: 'EN_CURSO' } },
+          ],
+        },
       ],
     })
   } else if (vista === 'historial') {
