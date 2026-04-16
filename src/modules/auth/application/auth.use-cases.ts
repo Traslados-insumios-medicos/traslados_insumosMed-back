@@ -18,19 +18,39 @@ export class AuthUseCases {
   ) {}
 
   async login(dto: LoginDto): Promise<AuthResult> {
-    const email = dto.email.trim().toLowerCase()
-    const usuario = await this.repo.findUserByEmail(email)
+    const identifier = dto.email.trim().toLowerCase()
+    
+    console.log('🔐 Intento de login con:', identifier)
+    
+    // Buscar por email o celular
+    let usuario = await this.repo.findUserByEmail(identifier)
+    console.log('📧 Búsqueda por email:', usuario ? 'Encontrado' : 'No encontrado')
+    
+    // Si no se encuentra por email, intentar buscar por celular
     if (!usuario) {
+      console.log('📱 Intentando buscar por celular...')
+      usuario = await this.repo.findUserByCelular(identifier)
+      console.log('📱 Búsqueda por celular:', usuario ? 'Encontrado' : 'No encontrado')
+    }
+    
+    if (!usuario) {
+      console.log('❌ Usuario no encontrado')
       throw new AppError(401, 'Credenciales inválidas')
     }
+    
+    console.log('✅ Usuario encontrado:', usuario.nombre, '- Rol:', usuario.rol)
+    
     if (!usuario.activo) {
       throw new AppError(403, 'Su acceso está inactivo. Contacte al administrador de la empresa.')
     }
 
     const valid = await this.hashService.compare(dto.password, usuario.password)
     if (!valid) {
+      console.log('❌ Contraseña incorrecta')
       throw new AppError(401, 'Credenciales inválidas')
     }
+    
+    console.log('✅ Contraseña correcta')
 
     // Generar nuevo token de sesión único
     const sessionToken = randomBytes(32).toString('hex')

@@ -30,6 +30,7 @@ async function main() {
     create: {
       nombre: 'Carlos Pérez',
       email: 'chofer@medlogix.ec',
+      celular: '0987654321',
       password: choferPassword,
       rol: 'CHOFER',
       cedula: '1712345678',
@@ -37,7 +38,7 @@ async function main() {
       activo: true,
     },
   })
-  console.log('[OK] Chofer:', chofer.email, '/ contraseña: Medlogix1234!')
+  console.log('[OK] Chofer:', chofer.email, '/ celular:', chofer.celular, '/ contraseña: Medlogix1234!')
 
   // Cliente principal de prueba
   const clientePrincipal = await prisma.cliente.upsert({
