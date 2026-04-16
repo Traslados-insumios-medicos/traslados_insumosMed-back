@@ -190,6 +190,19 @@ export const updateEstado = async (id: string, dto: UpdateEstadoDto) => {
     seguimientoChofer: updated.seguimientoChofer,
     choferId: updated.choferId,
   })
+  
+  // Emitir evento de socket cuando la ruta se completa
+  if (dto.estado === 'COMPLETADA') {
+    try {
+      getIo().to(`ruta:${id}`).emit('ruta:completada', {
+        rutaId: id,
+        estado: dto.estado,
+      })
+    } catch {
+      // Socket no disponible
+    }
+  }
+  
   return updated
 }
 
