@@ -2,6 +2,7 @@ import type { Prisma } from '@prisma/client'
 import { prisma } from '../../config/prisma'
 import { UpdateEstadoGuiaDto, UpdateDetalleGuiaDto } from './guias.schema'
 import { emitWebhookEventAsync } from '../webhooks/webhooks.service'
+import { getIo } from '../../websocket'
 
 const rutaMini = {
   select: {
@@ -164,6 +165,33 @@ export const updateEstado = async (id: string, dto: UpdateEstadoGuiaDto) => {
     clienteId: guia.clienteId,
     stopId: guia.stopId,
   })
+  
+  // Emitir evento de socket cuando hay incidencia
+  if (dto.estado === 'INCIDENCIA' && guia.rutaId) {
+    try {
+      getIo().to(`ruta:${guia.rutaId}`).emit('guia:incidencia', {
+        guiaId: guia.id,
+        numeroGuia: guia.numeroGuia,
+        rutaId: guia.rutaId,
+      })
+    } catch {
+      // Socket no disponible
+    }
+  }
+  
+  // Emitir evento cuando se entrega
+  if (dto.estado === 'ENTREGADO' && guia.rutaId) {
+    try {
+      getIo().to(`ruta:${guia.rutaId}`).emit('guia:entregada', {
+        guiaId: guia.id,
+        numeroGuia: guia.numeroGuia,
+        rutaId: guia.rutaId,
+      })
+    } catch {
+      // Socket no disponible
+    }
+  }
+  
   return guia
 }
 
@@ -183,8 +211,38 @@ export const updateDetalle = async (id: string, dto: UpdateDetalleGuiaDto) => {
       temperatura: true,
       observaciones: true,
       updatedAt: true,
+      estado: true,
     },
   })
+  
+  // Si es una incidencia y tiene el formato "INCIDENCIA: TIPO", crear novedad automáticamente
+  if (guia.estado === 'INCIDENCIA' && guia.receptorNombre?.startsWith('INCIDENCIA:')) {
+    const tipoIncidencia = guia.receptorNombre.replace('INCIDENCIA:', '').trim() as 'CLIENTE_AUSENTE' | 'MERCADERIA_DANADA' | 'DIRECCION_INCORRECTA' | 'OTRO'
+    
+    // Verificar si ya existe una novedad para esta guía
+    const novedadExistente = await prisma.novedad.findFirst({
+      where: { guiaId: guia.id },
+    })
+    
+    if (!novedadExistente) {
+      const descripcionNovedad = guia.observaciones || 
+        (tipoIncidencia === 'CLIENTE_AUSENTE' ? 'Cliente no estuvo presente en el momento de la entrega' :
+         tipoIncidencia === 'MERCADERIA_DANADA' ? 'La mercadería presenta daños' :
+         tipoIncidencia === 'DIRECCION_INCORRECTA' ? 'La dirección proporcionada es incorrecta' :
+         'Otra incidencia reportada por el chofer')
+      
+      await prisma.novedad.create({
+        data: {
+          tipo: tipoIncidencia,
+          descripcion: descripcionNovedad,
+          guiaId: guia.id,
+        },
+      })
+      
+      console.log(`✅ Novedad creada automáticamente para guía ${guia.numeroGuia} - Tipo: ${tipoIncidencia}`)
+    }
+  }
+  
   emitWebhookEventAsync('guia.detalle_updated', guia)
   return guia
 }

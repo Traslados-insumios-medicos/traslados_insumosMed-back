@@ -81,16 +81,19 @@ export function initWebSocket(httpServer: HttpServer) {
     // Unirse a la sala de una ruta
     socket.on('join:ruta', (rutaId: string) => {
       socket.join(`ruta:${rutaId}`)
+      console.log(`🚪 Usuario ${user.userId} (${user.rol}) se unió a sala ruta:${rutaId}`)
     })
 
     // Chofer emite su posición GPS
     socket.on('posicion_chofer', (data: { rutaId: string; lat: number; lng: number }) => {
       if (user.rol !== 'CHOFER') return
+      console.log(`📍 Chofer ${user.userId} envía posición para ruta:${data.rutaId}`, { lat: data.lat, lng: data.lng })
       io.to(`ruta:${data.rutaId}`).emit('posicion_chofer', {
         lat: data.lat,
         lng: data.lng,
         timestamp: Date.now(),
       })
+      console.log(`📡 Posición emitida a sala ruta:${data.rutaId}`)
     })
 
     // Chofer cambia estado de una guía
