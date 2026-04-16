@@ -11,7 +11,8 @@ export const porCliente = async (req: Request, res: Response, next: NextFunction
     const desde = req.query.desde as string | undefined
     const hasta = req.query.hasta as string | undefined
     const tipo = req.query.tipo as string | undefined
-    res.json(await svc.reportePorCliente({ clienteId, desde, hasta, tipo })) 
+    const choferId = req.query.choferId as string | undefined
+    res.json(await svc.reportePorCliente({ clienteId, desde, hasta, tipo, choferId })) 
   } catch (e) { next(e) }
 }
 
@@ -26,7 +27,7 @@ export const porChofer = async (req: Request, res: Response, next: NextFunction)
 
 export const porFecha = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { desde, hasta, clienteId } = req.query as Record<string, string>
-    res.json(await svc.reportePorFecha(desde, hasta, clienteId))
+    const { desde, hasta, clienteId, choferId } = req.query as Record<string, string>
+    res.json(await svc.reportePorFecha(desde, hasta, clienteId, choferId))
   } catch (e) { next(e) }
 }

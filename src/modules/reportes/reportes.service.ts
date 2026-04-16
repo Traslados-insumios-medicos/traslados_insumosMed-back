@@ -66,7 +66,7 @@ export async function dashboard() {
   }
 }
 
-export async function reportePorCliente(filters?: { clienteId?: string; desde?: string; hasta?: string; tipo?: string }) {
+export async function reportePorCliente(filters?: { clienteId?: string; desde?: string; hasta?: string; tipo?: string; choferId?: string }) {
   const clientes = await prisma.cliente.findMany({
     where: {
       ...(filters?.clienteId ? { id: filters.clienteId } : {}),
@@ -77,8 +77,24 @@ export async function reportePorCliente(filters?: { clienteId?: string; desde?: 
         select: { nombre: true }
       },
       guias: {
-        select: { id: true, estado: true, receptorNombre: true, createdAt: true },
+        select: {
+          id: true,
+          numeroGuia: true,
+          descripcion: true,
+          estado: true,
+          receptorNombre: true,
+          horaLlegada: true,
+          horaSalida: true,
+          temperatura: true,
+          observaciones: true,
+          createdAt: true,
+          ruta: { select: { id: true, fecha: true, createdAt: true, estado: true, chofer: { select: { id: true, nombre: true } } } },
+          stop: { select: { id: true, direccion: true, lat: true, lng: true } },
+          novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
+          fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },
+        },
         where: {
+          ...(filters?.choferId ? { ruta: { choferId: filters.choferId } } : {}),
           ...(filters?.desde || filters?.hasta ? {
             createdAt: {
               ...(filters.desde ? { gte: new Date(filters.desde) } : {}),
@@ -99,6 +115,22 @@ export async function reportePorCliente(filters?: { clienteId?: string; desde?: 
     entregados: c.guias.filter((g) => g.estado === 'ENTREGADO').length,
     pendientes: c.guias.filter((g) => g.estado === 'PENDIENTE').length,
     incidencias: c.guias.filter((g) => g.estado === 'INCIDENCIA').length,
+    guias: c.guias.map((g) => ({
+      id: g.id,
+      numeroGuia: g.numeroGuia,
+      descripcion: g.descripcion,
+      estado: g.estado,
+      receptorNombre: g.receptorNombre,
+      horaLlegada: g.horaLlegada,
+      horaSalida: g.horaSalida,
+      temperatura: g.temperatura,
+      observaciones: g.observaciones,
+      createdAt: g.createdAt,
+      ruta: g.ruta,
+      stop: g.stop,
+      novedades: g.novedades.map((n) => ({ tipo: n.tipo, descripcion: n.descripcion, createdAt: n.createdAt })),
+      fotos: g.fotos.map((f) => ({ id: f.id, urlPreview: f.urlPreview, tipo: f.tipo, createdAt: f.createdAt })),
+    })),
   }))
 }
 
@@ -119,7 +151,8 @@ export async function reportePorChofer(filters?: { choferId?: string; desde?: st
           stops: { include: { cliente: true } },
           guias: {
             include: {
-              novedades: true,
+              novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
+              fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },
             },
           },
         },
@@ -139,6 +172,7 @@ export async function reportePorChofer(filters?: { choferId?: string; desde?: st
         const stop = r.stops.find((s) => s.id === g.stopId)
         return {
           guiaId: g.id,
+          stopId: g.stopId,
           numeroGuia: g.numeroGuia,
           descripcion: g.descripcion,
           estado: g.estado,
@@ -148,26 +182,37 @@ export async function reportePorChofer(filters?: { choferId?: string; desde?: st
           horaSalida: g.horaSalida,
           temperatura: g.temperatura,
           observaciones: g.observaciones,
-          novedades: g.novedades.map((n) => n.descripcion),
+          createdAt: g.createdAt,
+          novedades: g.novedades.map((n) => ({
+            tipo: n.tipo,
+            descripcion: n.descripcion,
+            createdAt: n.createdAt,
+          })),
+          fotos: g.fotos
+            .filter((f) => f.tipo === 'GUIA')
+            .map((f) => ({ id: f.id, urlPreview: f.urlPreview, tipo: f.tipo, createdAt: f.createdAt })),
         }
       }),
     })),
   }))
 }
 
-export async function reportePorFecha(desde?: string, hasta?: string, clienteId?: string) {
+export async function reportePorFecha(desde?: string, hasta?: string, clienteId?: string, choferId?: string) {
   return prisma.guiaEntrega.findMany({
     where: {
       ...(clienteId ? { clienteId } : {}),
+      ...(choferId ? { ruta: { choferId } } : {}),
       createdAt: {
         ...(desde ? { gte: new Date(desde) } : {}),
         ...(hasta ? { lte: new Date(`${hasta}T23:59:59`) } : {}),
       },
     },
     include: {
-      cliente: { select: { nombre: true } },
-      ruta: { include: { chofer: { select: { nombre: true } } } },
-      novedades: true,
+      cliente: { select: { id: true, nombre: true } },
+      ruta: { select: { id: true, fecha: true, estado: true, chofer: { select: { id: true, nombre: true } } } },
+      stop: { select: { id: true, direccion: true, lat: true, lng: true } },
+      novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
+      fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
