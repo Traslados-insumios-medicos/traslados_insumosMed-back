@@ -77,17 +77,17 @@ function buildWhereMisEnvios(
   if (vista === 'activos') {
     parts.push({
       AND: [
-        { estado: { notIn: ['ENTREGADO'] } }, // Excluir guías ya entregadas
-        {
-          OR: [
-            { estado: { in: ['PENDIENTE', 'INCIDENCIA'] } },
-            { ruta: { estado: 'EN_CURSO' } },
-          ],
-        },
+        { estado: 'PENDIENTE' }, // Solo guías pendientes
+        { ruta: { estado: 'EN_CURSO' } }, // Y que la ruta esté en curso
       ],
     })
   } else if (vista === 'historial') {
-    parts.push({ estado: 'ENTREGADO' })
+    parts.push({ 
+      OR: [
+        { estado: 'ENTREGADO' },
+        { estado: 'INCIDENCIA' },
+      ],
+    })
   }
 
   if (parts.length) where.AND = parts
