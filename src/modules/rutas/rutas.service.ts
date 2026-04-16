@@ -28,7 +28,12 @@ const rutaInclude = {
       },
     },
   },
-  guias: true,
+  guias: {
+    include: {
+      fotos: true,
+      novedades: true,
+    },
+  },
   fotos: { where: { tipo: 'HOJA_RUTA' as const } },
 }
 

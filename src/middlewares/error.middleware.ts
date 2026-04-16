@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express'
 import { ZodError } from 'zod'
 import { AppError } from '../utils/app-error'
+import multer from 'multer'
 
 export function errorHandler(
   err: unknown,
@@ -19,6 +20,15 @@ export function errorHandler(
 
   if (err instanceof AppError) {
     res.status(err.statusCode).json({ message: err.message })
+    return
+  }
+
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      res.status(400).json({ message: 'El archivo supera el tamaño máximo permitido (10MB).' })
+      return
+    }
+    res.status(400).json({ message: err.message || 'Archivo inválido' })
     return
   }
 

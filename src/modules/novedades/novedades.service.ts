@@ -8,6 +8,7 @@ const novedadInclude = {
       numeroGuia: true, 
       clienteId: true,
       descripcion: true,
+      observaciones: true,
       estado: true,
       receptorNombre: true,
       ruta: {

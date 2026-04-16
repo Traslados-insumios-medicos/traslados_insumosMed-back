@@ -12,8 +12,6 @@ model Cliente {
   nombre              String
   ruc                 String        @unique
   direccion           String
-  lat                 Float?
-  lng                 Float?
   telefonoContacto    String?
   emailContacto       String?
   activo              Boolean       @default(true)
@@ -21,6 +19,8 @@ model Cliente {
   updatedAt           DateTime      @updatedAt
   clientePrincipalId  String?
   tipo                TipoCliente   @default(SECUNDARIO)
+  lat                 Float?
+  lng                 Float?
   clientePrincipal    Cliente?      @relation("ClienteJerarquia", fields: [clientePrincipalId], references: [id])
   clientesSecundarios Cliente[]     @relation("ClienteJerarquia")
   guias               GuiaEntrega[]
@@ -40,9 +40,9 @@ model Usuario {
   updatedAt          DateTime  @updatedAt
   clienteId          String?
   mustChangePassword Boolean   @default(false)
+  activeSessionToken String?   @unique
   resetToken         String?   @unique
   resetTokenExpiry   DateTime?
-  activeSessionToken String?   @unique
   rutas              Ruta[]
   cliente            Cliente?  @relation(fields: [clienteId], references: [id])
 }
@@ -126,6 +126,16 @@ model SeguimientoNovedad {
   createdAt DateTime @default(now())
   novedadId String
   novedad   Novedad  @relation(fields: [novedadId], references: [id], onDelete: Cascade)
+}
+
+model ruta_seguimiento_logs {
+  id                 String   @id
+  ruta_id            String
+  chofer_id          String
+  seguimiento_chofer String
+  created_at         DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([ruta_id, created_at(sort: Desc)], map: "idx_ruta_seguimiento_logs_ruta_id_created_at")
 }
 
 enum Rol {
