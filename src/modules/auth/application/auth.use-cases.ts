@@ -108,13 +108,35 @@ export class AuthUseCases {
       throw new AppError(409, 'Ya existe un usuario con ese email')
     }
 
+    // Verificar si el celular ya existe (solo si se proporciona)
+    if (dto.celular && dto.celular.trim()) {
+      const existeCelular = await this.repo.findUserByCelular(dto.celular)
+      if (existeCelular) {
+        throw new AppError(409, 'Ya existe un usuario con ese celular')
+      }
+    }
+
     const passwordTemporal = generarPasswordTemporal()
     const hashedPassword = await this.hashService.hash(passwordTemporal)
 
-    const usuario = await this.repo.createUser({ ...dto, password: hashedPassword })
-
-    // Devolvemos la contraseña temporal en texto plano — solo esta vez
-    return { usuario, passwordTemporal }
+    try {
+      const usuario = await this.repo.createUser({ ...dto, password: hashedPassword })
+      // Devolvemos la contraseña temporal en texto plano — solo esta vez
+      return { usuario, passwordTemporal }
+    } catch (error: any) {
+      // Capturar errores de Prisma por restricciones únicas
+      if (error.code === 'P2002') {
+        const field = error.meta?.target?.[0]
+        if (field === 'celular') {
+          throw new AppError(409, 'Ya existe un usuario con ese celular')
+        } else if (field === 'email') {
+          throw new AppError(409, 'Ya existe un usuario con ese email')
+        } else if (field === 'cedula') {
+          throw new AppError(409, 'Ya existe un usuario con esa cédula')
+        }
+      }
+      throw error
+    }
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
