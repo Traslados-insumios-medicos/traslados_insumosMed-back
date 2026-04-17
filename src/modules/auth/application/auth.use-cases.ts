@@ -198,36 +198,34 @@ export class AuthUseCases {
     return this.repo.updateProfile(userId, dto)
   }
 
-  async forgotPassword(dto: ForgotPasswordDto) {
-    const usuario = await this.repo.findUserByEmail(dto.email.trim().toLowerCase())
+  async generateTempPassword(userId: string) {
+    const usuario = await this.repo.findUserById(userId)
     if (!usuario) {
-      // Por seguridad, no revelamos si el email existe o no
-      return { message: 'Si el email existe, recibirás un enlace de recuperación' }
+      throw new AppError(404, 'Usuario no encontrado')
     }
 
-    // Generar token único
-    const resetToken = randomBytes(32).toString('hex')
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000) // 1 hora
-
-    await this.repo.setResetToken(usuario.id, resetToken, resetTokenExpiry)
-
-    return { resetToken, usuario }
-  }
-
-  async resetPassword(dto: ResetPasswordDto) {
-    const usuario = await this.repo.findUserByResetToken(dto.token)
-    if (!usuario || !usuario.resetTokenExpiry) {
-      throw new AppError(400, 'Token inválido o expirado')
+    // Solo permitir para CLIENTE y CHOFER
+    if (usuario.rol !== 'CLIENTE' && usuario.rol !== 'CHOFER') {
+      throw new AppError(400, 'Solo se puede generar contraseña temporal para clientes y choferes')
     }
 
-    if (new Date() > usuario.resetTokenExpiry) {
-      throw new AppError(400, 'Token expirado')
+    const passwordTemporal = generarPasswordTemporal()
+    const hashedPassword = await this.hashService.hash(passwordTemporal)
+
+    await this.repo.updateUser(usuario.id, {
+      password: hashedPassword,
+      mustChangePassword: true,
+    })
+
+    return { 
+      message: 'Contraseña temporal generada exitosamente',
+      passwordTemporal,
+      usuario: {
+        id: usuario.id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol,
+      }
     }
-
-    const nuevoHash = await this.hashService.hash(dto.passwordNueva)
-    await this.repo.updatePassword(usuario.id, nuevoHash)
-    await this.repo.clearResetToken(usuario.id)
-
-    return { message: 'Contraseña actualizada exitosamente' }
   }
 }
