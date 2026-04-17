@@ -35,7 +35,7 @@ export class AuthPrismaRepository implements IAuthRepository {
     password: string
     rol: string
     cedula?: string
-    celular: string
+    celular?: string
     clienteId?: string
   }) {
     return prisma.usuario.create({
