@@ -14,6 +14,7 @@ async function main() {
     create: {
       nombre: 'Administrador',
       email: 'admin@medlogix.ec',
+      celular: '0999999999',
       password: adminPassword,
       rol: 'ADMIN',
       mustChangePassword: false,
@@ -78,6 +79,7 @@ async function main() {
     create: {
       nombre: 'Admin CIMED',
       email: 'cliente@medlogix.ec',
+      celular: '0988888888',
       password: clienteUserPassword,
       rol: 'CLIENTE',
       clienteId: clientePrincipal.id,
