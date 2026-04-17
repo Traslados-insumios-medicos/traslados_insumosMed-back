@@ -8,6 +8,10 @@ import { emitWebhookEventAsync } from '../webhooks/webhooks.service'
 const clienteInclude = {
   clientePrincipal: { select: { id: true, nombre: true } },
   clientesSecundarios: { select: { id: true, nombre: true, ruc: true, activo: true, direccion: true, lat: true, lng: true } },
+  usuarios: { 
+    where: { rol: Rol.CLIENTE },
+    select: { id: true, nombre: true, email: true, activo: true }
+  },
 } satisfies Prisma.ClienteInclude
 
 export const getAll = async (page = 1, limit = 10, tipo?: TipoCliente, activo?: boolean) => {
