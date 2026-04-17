@@ -31,3 +31,10 @@ export const porFecha = async (req: Request, res: Response, next: NextFunction) 
     res.json(await svc.reportePorFecha(desde, hasta, clienteId, choferId))
   } catch (e) { next(e) }
 }
+
+export const porGuia = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { desde, hasta, clienteId, choferId, tipo } = req.query as Record<string, string>
+    res.json(await svc.reportePorGuia({ desde, hasta, clienteId, choferId, tipo }))
+  } catch (e) { next(e) }
+}
