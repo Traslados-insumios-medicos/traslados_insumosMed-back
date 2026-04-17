@@ -217,3 +217,27 @@ export async function reportePorFecha(desde?: string, hasta?: string, clienteId?
     orderBy: { createdAt: 'desc' },
   })
 }
+
+export async function reportePorGuia(filters?: { desde?: string; hasta?: string; clienteId?: string; choferId?: string; tipo?: string }) {
+  return prisma.guiaEntrega.findMany({
+    where: {
+      ...(filters?.clienteId ? { clienteId: filters.clienteId } : {}),
+      ...(filters?.choferId ? { ruta: { choferId: filters.choferId } } : {}),
+      ...(filters?.tipo ? { cliente: { tipo: filters.tipo as 'PRINCIPAL' | 'SECUNDARIO' } } : {}),
+      ...(filters?.desde || filters?.hasta ? {
+        createdAt: {
+          ...(filters.desde ? { gte: new Date(filters.desde) } : {}),
+          ...(filters.hasta ? { lte: new Date(`${filters.hasta}T23:59:59`) } : {}),
+        }
+      } : {})
+    },
+    include: {
+      cliente: { select: { id: true, nombre: true } },
+      ruta: { select: { id: true, fecha: true, estado: true, chofer: { select: { id: true, nombre: true } } } },
+      stop: { select: { id: true, direccion: true, lat: true, lng: true } },
+      novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
+      fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
+}
