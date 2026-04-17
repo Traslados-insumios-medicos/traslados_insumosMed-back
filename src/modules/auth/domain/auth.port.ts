@@ -65,6 +65,7 @@ export interface IAuthRepository {
     password: string
     rol: string
     cedula?: string
+    celular: string
     clienteId?: string
   }): Promise<{ id: string; nombre: string; email: string; rol: string }>
 
