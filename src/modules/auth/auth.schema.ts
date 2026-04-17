@@ -10,8 +10,17 @@ export const registerSchema = z.object({
   email: z.string().regex(/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/, 'El email debe contener @, dominio y extensión válida (ej. usuario@empresa.com)'),
   rol: z.enum(['ADMIN', 'CHOFER', 'CLIENTE']),
   cedula: z.string().regex(/^\d{10}$/, 'La cédula debe tener exactamente 10 dígitos numéricos').optional(),
-  celular: z.string().regex(/^\d{10}$/, 'El celular debe tener exactamente 10 dígitos numéricos'),
+  celular: z.string().regex(/^\d{10}$/, 'El celular debe tener exactamente 10 dígitos numéricos').optional(),
   clienteId: z.string().optional(),
+}).refine((data) => {
+  // Celular es obligatorio solo para CHOFER
+  if (data.rol === 'CHOFER' && !data.celular) {
+    return false
+  }
+  return true
+}, {
+  message: 'El celular es obligatorio para choferes',
+  path: ['celular'],
 })
 
 export const changePasswordSchema = z.object({
