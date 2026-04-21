@@ -145,9 +145,17 @@ export const create = async (dto: CreateRutaDto) => {
 
       for (const guia of guiasInput) {
         guiaCounter++
-        // Format: G-{timestamp_last6digits}-{orden}
-        // When multiple guias exist across stops, use a global counter for uniqueness
-        const numeroGuia = `G-${timestamp}-${guiaCounter}`
+        // Usar numeroGuia del payload si viene, si no generar automáticamente
+        const numeroGuia = guia.numeroGuia?.trim()
+          ? guia.numeroGuia.trim()
+          : `G-${timestamp}-${guiaCounter}`
+
+        // Validar unicidad del número de guía
+        const existing = await tx.guiaEntrega.findFirst({ where: { numeroGuia } })
+        if (existing) {
+          throw new AppError(409, `El número de guía "${numeroGuia}" ya existe`)
+        }
+
         await tx.guiaEntrega.create({
           data: {
             numeroGuia,

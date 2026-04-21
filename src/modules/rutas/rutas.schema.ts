@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 const guiaInputSchema = z.object({
   descripcion: z.string().min(1),
+  numeroGuia: z.string().optional(),
 })
 
 const stopInputSchema = z.object({
