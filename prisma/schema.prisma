@@ -50,13 +50,13 @@ model Usuario {
 
 model Ruta {
   id                String                  @id @default(cuid())
-  nombre            String?
   fecha             String
   estado            EstadoRuta              @default(PENDIENTE)
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
   choferId          String
   seguimientoChofer EstadoSeguimientoChofer @default(NINGUNO)
+  nombre            String?
   fotos             Foto[]
   guias             GuiaEntrega[]
   chofer            Usuario                 @relation(fields: [choferId], references: [id])
