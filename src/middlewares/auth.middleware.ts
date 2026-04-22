@@ -42,11 +42,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       return
     }
     
-    // Validar que el token de sesión coincida con el almacenado en la base de datos
-    if (payload.sessionToken && user.activeSessionToken !== payload.sessionToken) {
-      res.status(401).json({ message: 'Su sesión ha expirado. Otra sesión ha sido iniciada con esta cuenta.' })
-      return
-    }
+    // Sesiones simultáneas permitidas — no validar sessionToken
     
     req.user = payload
     next()
