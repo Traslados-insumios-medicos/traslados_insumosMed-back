@@ -3,7 +3,6 @@ import { Server } from 'socket.io'
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env'
 import { JwtPayload } from '../middlewares/auth.middleware'
-import { prisma } from '../config/prisma'
 
 let ioRef: Server | null = null
 
@@ -55,18 +54,6 @@ export function initWebSocket(httpServer: HttpServer) {
     if (!token) return next(new Error('Token requerido'))
     try {
       const payload = jwt.verify(token, env.JWT_SECRET) as JwtPayload
-      
-      // Validar que el token de sesión coincida con el almacenado en la base de datos
-      if (payload.sessionToken) {
-        const user = await prisma.usuario.findUnique({
-          where: { id: payload.userId },
-          select: { activeSessionToken: true },
-        })
-        if (!user || user.activeSessionToken !== payload.sessionToken) {
-          return next(new Error('Sesión expirada'))
-        }
-      }
-      
       socket.data.user = payload
       next()
     } catch {
