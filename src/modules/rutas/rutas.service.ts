@@ -119,6 +119,9 @@ export const create = async (dto: CreateRutaDto) => {
     const ruta = await tx.ruta.create({
       data: {
         nombre: dto.nombre?.trim() || null,
+        hojaRuta: dto.hojaRuta?.trim() || null,
+        lugarOrigen: dto.lugarOrigen?.trim() || null,
+        lugarDestino: dto.lugarDestino?.trim() || null,
         fecha: dto.fecha,
         choferId: dto.choferId,
       },
@@ -179,6 +182,10 @@ export const create = async (dto: CreateRutaDto) => {
     fecha: created.fecha,
     estado: created.estado,
     choferId: created.choferId,
+    nombre: created.nombre,
+    hojaRuta: created.hojaRuta,
+    lugarOrigen: created.lugarOrigen,
+    lugarDestino: created.lugarDestino,
     stops: created.stops.map((s: any) => ({ id: s.id, orden: s.orden, clienteId: s.clienteId })),
   })
   return created

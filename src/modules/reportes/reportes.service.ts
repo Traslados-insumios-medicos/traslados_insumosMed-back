@@ -88,7 +88,19 @@ export async function reportePorCliente(filters?: { clienteId?: string; desde?: 
           temperatura: true,
           observaciones: true,
           createdAt: true,
-          ruta: { select: { id: true, fecha: true, createdAt: true, estado: true, chofer: { select: { id: true, nombre: true } } } },
+          ruta: {
+            select: {
+              id: true,
+              nombre: true,
+              hojaRuta: true,
+              lugarOrigen: true,
+              lugarDestino: true,
+              fecha: true,
+              createdAt: true,
+              estado: true,
+              chofer: { select: { id: true, nombre: true } },
+            },
+          },
           stop: { select: { id: true, direccion: true, lat: true, lng: true } },
           novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
           fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },
@@ -168,6 +180,10 @@ export async function reportePorChofer(filters?: { choferId?: string; desde?: st
       rutaId: r.id,
       fecha: r.fecha,
       estado: r.estado,
+      nombre: r.nombre,
+      hojaRuta: r.hojaRuta,
+      lugarOrigen: r.lugarOrigen,
+      lugarDestino: r.lugarDestino,
       guias: r.guias.map((g) => {
         const stop = r.stops.find((s) => s.id === g.stopId)
         return {
@@ -209,7 +225,18 @@ export async function reportePorFecha(desde?: string, hasta?: string, clienteId?
     },
     include: {
       cliente: { select: { id: true, nombre: true } },
-      ruta: { select: { id: true, fecha: true, estado: true, chofer: { select: { id: true, nombre: true } } } },
+      ruta: {
+        select: {
+          id: true,
+          nombre: true,
+          hojaRuta: true,
+          lugarOrigen: true,
+          lugarDestino: true,
+          fecha: true,
+          estado: true,
+          chofer: { select: { id: true, nombre: true } },
+        },
+      },
       stop: { select: { id: true, direccion: true, lat: true, lng: true } },
       novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
       fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },
@@ -233,7 +260,18 @@ export async function reportePorGuia(filters?: { desde?: string; hasta?: string;
     },
     include: {
       cliente: { select: { id: true, nombre: true } },
-      ruta: { select: { id: true, fecha: true, estado: true, chofer: { select: { id: true, nombre: true } } } },
+      ruta: {
+        select: {
+          id: true,
+          nombre: true,
+          hojaRuta: true,
+          lugarOrigen: true,
+          lugarDestino: true,
+          fecha: true,
+          estado: true,
+          chofer: { select: { id: true, nombre: true } },
+        },
+      },
       stop: { select: { id: true, direccion: true, lat: true, lng: true } },
       novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
       fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },

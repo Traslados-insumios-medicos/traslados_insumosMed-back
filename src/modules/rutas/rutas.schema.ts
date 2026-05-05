@@ -19,6 +19,9 @@ const stopInputSchema = z.object({
 
 export const createRutaSchema = z.object({
   nombre: z.string().max(60).optional(),
+  hojaRuta: z.string().max(120).optional(),
+  lugarOrigen: z.string().max(200).optional(),
+  lugarDestino: z.string().max(200).optional(),
   fecha: z.string().min(1),
   choferId: z.string().min(1),
   stops: z.array(stopInputSchema).min(1),
