@@ -1,47 +1,59 @@
-import { prisma } from '../../config/prisma'
+import { prisma } from "../../config/prisma";
 
 export async function dashboard() {
-  const [enviosActivos, rutasEnCurso, entregasCompletadas, novedadesCount, ultimasRutas, ultimasNovedades] =
-    await Promise.all([
-      prisma.guiaEntrega.count({ where: { ruta: { estado: { in: ['PENDIENTE', 'EN_CURSO'] } } } }),
-      prisma.ruta.count({ where: { estado: 'EN_CURSO' } }),
-      prisma.guiaEntrega.count({ where: { estado: 'ENTREGADO' } }),
-      prisma.novedad.count(),
-      prisma.ruta.findMany({
-        take: 5,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          chofer: { select: { id: true, nombre: true } },
-          guias: { select: { id: true, estado: true } },
-          stops: { select: { id: true, orden: true, direccion: true }, orderBy: { orden: 'asc' }, take: 1 },
+  const [
+    enviosActivos,
+    rutasEnCurso,
+    entregasCompletadas,
+    novedadesCount,
+    ultimasRutas,
+    ultimasNovedades,
+  ] = await Promise.all([
+    prisma.guiaEntrega.count({
+      where: { ruta: { estado: { in: ["PENDIENTE", "EN_CURSO"] } } },
+    }),
+    prisma.ruta.count({ where: { estado: "EN_CURSO" } }),
+    prisma.guiaEntrega.count({ where: { estado: "ENTREGADO" } }),
+    prisma.novedad.count(),
+    prisma.ruta.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: {
+        chofer: { select: { id: true, nombre: true } },
+        guias: { select: { id: true, estado: true } },
+        stops: {
+          select: { id: true, orden: true, direccion: true },
+          orderBy: { orden: "asc" },
+          take: 1,
         },
-      }),
-      prisma.novedad.findMany({
-        take: 5,
-        orderBy: { createdAt: 'desc' },
-        include: { 
-          guia: { 
-            select: { 
-              numeroGuia: true, 
-              clienteId: true,
-              receptorNombre: true,
-              ruta: {
-                select: {
-                  id: true,
-                  fecha: true,
-                  chofer: { select: { nombre: true } }
-                }
+      },
+    }),
+    prisma.novedad.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: {
+        guia: {
+          select: {
+            numeroGuia: true,
+            clienteId: true,
+            receptorNombre: true,
+            ruta: {
+              select: {
+                id: true,
+                fecha: true,
+                chofer: { select: { nombre: true } },
               },
-              stop: {
-                select: {
-                  cliente: { select: { nombre: true } }
-                }
-              }
-            } 
-          } 
+            },
+            stop: {
+              select: {
+                cliente: { select: { nombre: true } },
+              },
+            },
+          },
         },
-      }),
-    ])
+      },
+    }),
+  ]);
 
   return {
     enviosActivos,
@@ -49,32 +61,44 @@ export async function dashboard() {
     entregasCompletadas,
     novedadesCount,
     ultimasRutas: ultimasRutas.map((r) => {
-      const total = r.guias.length
-      const entregadas = r.guias.filter((g) => g.estado === 'ENTREGADO').length
-      const incidencias = r.guias.filter((g) => g.estado === 'INCIDENCIA').length
+      const total = r.guias.length;
+      const entregadas = r.guias.filter((g) => g.estado === "ENTREGADO").length;
+      const incidencias = r.guias.filter(
+        (g) => g.estado === "INCIDENCIA",
+      ).length;
       return {
         id: r.id,
         fecha: r.fecha,
         estado: r.estado,
         chofer: r.chofer,
-        progreso: total ? Math.round(((entregadas + incidencias) / total) * 100) : 0,
+        progreso: total
+          ? Math.round(((entregadas + incidencias) / total) * 100)
+          : 0,
         totalGuias: total,
-        primerDestino: r.stops[0]?.direccion ?? '—',
-      }
+        primerDestino: r.stops[0]?.direccion ?? "—",
+      };
     }),
     ultimasNovedades,
-  }
+  };
 }
 
-export async function reportePorCliente(filters?: { clienteId?: string; desde?: string; hasta?: string; tipo?: string; choferId?: string }) {
+export async function reportePorCliente(filters?: {
+  clienteId?: string;
+  desde?: string;
+  hasta?: string;
+  tipo?: string;
+  choferId?: string;
+}) {
   const clientes = await prisma.cliente.findMany({
     where: {
       ...(filters?.clienteId ? { id: filters.clienteId } : {}),
-      ...(filters?.tipo ? { tipo: filters.tipo as 'PRINCIPAL' | 'SECUNDARIO' } : {})
+      ...(filters?.tipo
+        ? { tipo: filters.tipo as "PRINCIPAL" | "SECUNDARIO" }
+        : {}),
     },
     include: {
       clientePrincipal: {
-        select: { nombre: true }
+        select: { nombre: true },
       },
       guias: {
         select: {
@@ -102,21 +126,31 @@ export async function reportePorCliente(filters?: { clienteId?: string; desde?: 
             },
           },
           stop: { select: { id: true, direccion: true, lat: true, lng: true } },
-          novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
-          fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },
+          novedades: {
+            select: { tipo: true, descripcion: true, createdAt: true },
+          },
+          fotos: {
+            select: { id: true, urlPreview: true, tipo: true, createdAt: true },
+          },
         },
         where: {
-          ...(filters?.choferId ? { ruta: { choferId: filters.choferId } } : {}),
-          ...(filters?.desde || filters?.hasta ? {
-            createdAt: {
-              ...(filters.desde ? { gte: new Date(filters.desde) } : {}),
-              ...(filters.hasta ? { lte: new Date(filters.hasta + 'T23:59:59') } : {}),
-            }
-          } : {})
-        }
+          ...(filters?.choferId
+            ? { ruta: { choferId: filters.choferId } }
+            : {}),
+          ...(filters?.desde || filters?.hasta
+            ? {
+                createdAt: {
+                  ...(filters.desde ? { gte: new Date(filters.desde) } : {}),
+                  ...(filters.hasta
+                    ? { lte: new Date(filters.hasta + "T23:59:59") }
+                    : {}),
+                },
+              }
+            : {}),
+        },
       },
     },
-  })
+  });
 
   return clientes.map((c) => ({
     clienteId: c.id,
@@ -124,9 +158,9 @@ export async function reportePorCliente(filters?: { clienteId?: string; desde?: 
     tipo: c.tipo,
     clientePrincipal: c.clientePrincipal,
     total: c.guias.length,
-    entregados: c.guias.filter((g) => g.estado === 'ENTREGADO').length,
-    pendientes: c.guias.filter((g) => g.estado === 'PENDIENTE').length,
-    incidencias: c.guias.filter((g) => g.estado === 'INCIDENCIA').length,
+    entregados: c.guias.filter((g) => g.estado === "ENTREGADO").length,
+    pendientes: c.guias.filter((g) => g.estado === "PENDIENTE").length,
+    incidencias: c.guias.filter((g) => g.estado === "INCIDENCIA").length,
     guias: c.guias.map((g) => ({
       id: g.id,
       numeroGuia: g.numeroGuia,
@@ -140,37 +174,64 @@ export async function reportePorCliente(filters?: { clienteId?: string; desde?: 
       createdAt: g.createdAt,
       ruta: g.ruta,
       stop: g.stop,
-      novedades: g.novedades.map((n) => ({ tipo: n.tipo, descripcion: n.descripcion, createdAt: n.createdAt })),
-      fotos: g.fotos.map((f) => ({ id: f.id, urlPreview: f.urlPreview, tipo: f.tipo, createdAt: f.createdAt })),
+      novedades: g.novedades.map((n) => ({
+        tipo: n.tipo,
+        descripcion: n.descripcion,
+        createdAt: n.createdAt,
+      })),
+      fotos: g.fotos.map((f) => ({
+        id: f.id,
+        urlPreview: f.urlPreview,
+        tipo: f.tipo,
+        createdAt: f.createdAt,
+      })),
     })),
-  }))
+  }));
 }
 
-export async function reportePorChofer(filters?: { choferId?: string; desde?: string; hasta?: string }) {
+export async function reportePorChofer(filters?: {
+  choferId?: string;
+  desde?: string;
+  hasta?: string;
+}) {
   const choferes = await prisma.usuario.findMany({
-    where: { rol: 'CHOFER', ...(filters?.choferId ? { id: filters.choferId } : {}) },
+    where: {
+      rol: "CHOFER",
+      ...(filters?.choferId ? { id: filters.choferId } : {}),
+    },
     include: {
       rutas: {
         where: {
-          ...(filters?.desde || filters?.hasta ? {
-            fecha: {
-              ...(filters.desde ? { gte: filters.desde } : {}),
-              ...(filters.hasta ? { lte: filters.hasta } : {}),
-            }
-          } : {})
+          ...(filters?.desde || filters?.hasta
+            ? {
+                fecha: {
+                  ...(filters.desde ? { gte: filters.desde } : {}),
+                  ...(filters.hasta ? { lte: filters.hasta } : {}),
+                },
+              }
+            : {}),
         },
         include: {
           stops: { include: { cliente: true } },
           guias: {
             include: {
-              novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
-              fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },
+              novedades: {
+                select: { tipo: true, descripcion: true, createdAt: true },
+              },
+              fotos: {
+                select: {
+                  id: true,
+                  urlPreview: true,
+                  tipo: true,
+                  createdAt: true,
+                },
+              },
             },
           },
         },
       },
     },
-  })
+  });
 
   return choferes.map((ch) => ({
     choferId: ch.id,
@@ -185,7 +246,7 @@ export async function reportePorChofer(filters?: { choferId?: string; desde?: st
       lugarOrigen: r.lugarOrigen,
       lugarDestino: r.lugarDestino,
       guias: r.guias.map((g) => {
-        const stop = r.stops.find((s) => s.id === g.stopId)
+        const stop = r.stops.find((s) => s.id === g.stopId);
         return {
           guiaId: g.id,
           stopId: g.stopId,
@@ -205,15 +266,25 @@ export async function reportePorChofer(filters?: { choferId?: string; desde?: st
             createdAt: n.createdAt,
           })),
           fotos: g.fotos
-            .filter((f) => f.tipo === 'GUIA')
-            .map((f) => ({ id: f.id, urlPreview: f.urlPreview, tipo: f.tipo, createdAt: f.createdAt })),
-        }
+            .filter((f) => f.tipo === "GUIA")
+            .map((f) => ({
+              id: f.id,
+              urlPreview: f.urlPreview,
+              tipo: f.tipo,
+              createdAt: f.createdAt,
+            })),
+        };
       }),
     })),
-  }))
+  }));
 }
 
-export async function reportePorFecha(desde?: string, hasta?: string, clienteId?: string, choferId?: string) {
+export async function reportePorFecha(
+  desde?: string,
+  hasta?: string,
+  clienteId?: string,
+  choferId?: string,
+) {
   return prisma.guiaEntrega.findMany({
     where: {
       ...(clienteId ? { clienteId } : {}),
@@ -239,24 +310,39 @@ export async function reportePorFecha(desde?: string, hasta?: string, clienteId?
       },
       stop: { select: { id: true, direccion: true, lat: true, lng: true } },
       novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
-      fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },
+      fotos: {
+        select: { id: true, urlPreview: true, tipo: true, createdAt: true },
+      },
     },
-    orderBy: { createdAt: 'desc' },
-  })
+    orderBy: { createdAt: "desc" },
+    take: 500,
+  });
 }
 
-export async function reportePorGuia(filters?: { desde?: string; hasta?: string; clienteId?: string; choferId?: string; tipo?: string }) {
+export async function reportePorGuia(filters?: {
+  desde?: string;
+  hasta?: string;
+  clienteId?: string;
+  choferId?: string;
+  tipo?: string;
+}) {
   return prisma.guiaEntrega.findMany({
     where: {
       ...(filters?.clienteId ? { clienteId: filters.clienteId } : {}),
       ...(filters?.choferId ? { ruta: { choferId: filters.choferId } } : {}),
-      ...(filters?.tipo ? { cliente: { tipo: filters.tipo as 'PRINCIPAL' | 'SECUNDARIO' } } : {}),
-      ...(filters?.desde || filters?.hasta ? {
-        createdAt: {
-          ...(filters.desde ? { gte: new Date(filters.desde) } : {}),
-          ...(filters.hasta ? { lte: new Date(`${filters.hasta}T23:59:59`) } : {}),
-        }
-      } : {})
+      ...(filters?.tipo
+        ? { cliente: { tipo: filters.tipo as "PRINCIPAL" | "SECUNDARIO" } }
+        : {}),
+      ...(filters?.desde || filters?.hasta
+        ? {
+            createdAt: {
+              ...(filters.desde ? { gte: new Date(filters.desde) } : {}),
+              ...(filters.hasta
+                ? { lte: new Date(`${filters.hasta}T23:59:59`) }
+                : {}),
+            },
+          }
+        : {}),
     },
     include: {
       cliente: { select: { id: true, nombre: true } },
@@ -274,8 +360,11 @@ export async function reportePorGuia(filters?: { desde?: string; hasta?: string;
       },
       stop: { select: { id: true, direccion: true, lat: true, lng: true } },
       novedades: { select: { tipo: true, descripcion: true, createdAt: true } },
-      fotos: { select: { id: true, urlPreview: true, tipo: true, createdAt: true } },
+      fotos: {
+        select: { id: true, urlPreview: true, tipo: true, createdAt: true },
+      },
     },
-    orderBy: { createdAt: 'desc' },
-  })
+    orderBy: { createdAt: "desc" },
+    take: 500,
+  });
 }

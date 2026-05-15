@@ -207,9 +207,11 @@ export const updateEstado = async (id: string, dto: UpdateEstadoGuiaDto) => {
 };
 
 export const updateDetalle = async (id: string, dto: UpdateDetalleGuiaDto) => {
+  const { tipoIncidencia, ...detalleData } = dto;
+
   const guia = await prisma.guiaEntrega.update({
     where: { id },
-    data: dto,
+    data: detalleData,
     select: {
       id: true,
       numeroGuia: true,
@@ -226,20 +228,8 @@ export const updateDetalle = async (id: string, dto: UpdateDetalleGuiaDto) => {
     },
   });
 
-  // Si es una incidencia y tiene el formato "INCIDENCIA: TIPO", crear novedad automáticamente
-  if (
-    guia.estado === "INCIDENCIA" &&
-    guia.receptorNombre?.startsWith("INCIDENCIA:")
-  ) {
-    const tipoIncidencia = guia.receptorNombre
-      .replace("INCIDENCIA:", "")
-      .trim() as
-      | "CLIENTE_AUSENTE"
-      | "MERCADERIA_DANADA"
-      | "DIRECCION_INCORRECTA"
-      | "OTRO";
-
-    // Verificar si ya existe una novedad para esta guía
+  // Crear novedad si es incidencia y viene el tipo explícito
+  if (guia.estado === "INCIDENCIA" && tipoIncidencia) {
     const novedadExistente = await prisma.novedad.findFirst({
       where: { guiaId: guia.id },
     });
@@ -264,8 +254,36 @@ export const updateDetalle = async (id: string, dto: UpdateDetalleGuiaDto) => {
       });
 
       console.log(
-        `✅ Novedad creada automáticamente para guía ${guia.numeroGuia} - Tipo: ${tipoIncidencia}`,
+        `✅ Novedad creada para guía ${guia.numeroGuia} - Tipo: ${tipoIncidencia}`,
       );
+    }
+  }
+
+  // Compatibilidad hacia atrás: detectar prefijo legacy "INCIDENCIA:" en receptorNombre
+  if (
+    guia.estado === "INCIDENCIA" &&
+    !tipoIncidencia &&
+    guia.receptorNombre?.startsWith("INCIDENCIA:")
+  ) {
+    const tipoLegacy = guia.receptorNombre.replace("INCIDENCIA:", "").trim() as
+      | "CLIENTE_AUSENTE"
+      | "MERCADERIA_DANADA"
+      | "DIRECCION_INCORRECTA"
+      | "OTRO";
+
+    const novedadExistente = await prisma.novedad.findFirst({
+      where: { guiaId: guia.id },
+    });
+    if (!novedadExistente) {
+      const descripcionNovedad =
+        guia.observaciones || "Incidencia reportada por el chofer";
+      await prisma.novedad.create({
+        data: {
+          tipo: tipoLegacy,
+          descripcion: descripcionNovedad,
+          guiaId: guia.id,
+        },
+      });
     }
   }
 

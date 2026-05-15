@@ -1,8 +1,8 @@
-import { z } from 'zod'
+import { z } from "zod";
 
 export const updateEstadoSchema = z.object({
-  estado: z.enum(['PENDIENTE', 'ENTREGADO', 'INCIDENCIA']),
-})
+  estado: z.enum(["PENDIENTE", "ENTREGADO", "INCIDENCIA"]),
+});
 
 export const updateDetalleSchema = z.object({
   receptorNombre: z.string().optional(),
@@ -10,7 +10,15 @@ export const updateDetalleSchema = z.object({
   horaSalida: z.string().optional(),
   temperatura: z.string().optional(),
   observaciones: z.string().optional(),
-})
+  tipoIncidencia: z
+    .enum([
+      "CLIENTE_AUSENTE",
+      "MERCADERIA_DANADA",
+      "DIRECCION_INCORRECTA",
+      "OTRO",
+    ])
+    .optional(),
+});
 
-export type UpdateEstadoGuiaDto = z.infer<typeof updateEstadoSchema>
-export type UpdateDetalleGuiaDto = z.infer<typeof updateDetalleSchema>
+export type UpdateEstadoGuiaDto = z.infer<typeof updateEstadoSchema>;
+export type UpdateDetalleGuiaDto = z.infer<typeof updateDetalleSchema>;
