@@ -81,6 +81,7 @@ function buildWhereMisEnvios(
         { numeroGuia: { contains: q, mode: "insensitive" } },
         { descripcion: { contains: q, mode: "insensitive" } },
         { ruta: { hojaRuta: { contains: q, mode: "insensitive" } } },
+        { ruta: { nombre: { contains: q, mode: "insensitive" } } },
       ],
     });
   }

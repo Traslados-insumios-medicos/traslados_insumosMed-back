@@ -62,9 +62,19 @@ export const getAll = async (filters: GetAllFilters = {}) => {
   if (fecha) where.fecha = fecha;
   if (estado) where.estado = estado;
 
-  // Búsqueda en receptorNombre (guías) y nombre de clientes (stops)
   if (search) {
     where.OR = [
+      {
+        hojaRuta: { contains: search, mode: "insensitive" },
+      },
+      {
+        nombre: { contains: search, mode: "insensitive" },
+      },
+      {
+        chofer: {
+          nombre: { contains: search, mode: "insensitive" },
+        },
+      },
       {
         stops: {
           some: {
@@ -83,11 +93,6 @@ export const getAll = async (filters: GetAllFilters = {}) => {
               },
             },
           },
-        },
-      },
-      {
-        chofer: {
-          nombre: { contains: search, mode: "insensitive" },
         },
       },
     ];
