@@ -7,6 +7,7 @@ const router = Router()
 router.use(authenticate)
 
 router.get('/', ctrl.getAll)
+router.get('/ciudades', ctrl.getCiudades)
 router.get('/:id', ctrl.getById)
 router.post('/', authorize('ADMIN'), ctrl.create)
 router.put('/:id', authorize('ADMIN'), ctrl.update)

@@ -19,7 +19,20 @@ export const getAll = async (
           ? false
           : undefined;
     const search = req.query.search as string | undefined;
-    res.json(await svc.getAll(page, limit, tipo, activo, search));
+    const ciudad = req.query.ciudad as string | undefined;
+    res.json(await svc.getAll(page, limit, tipo, activo, search, ciudad));
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const getCiudades = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    res.json(await svc.getCiudadesDistinct());
   } catch (e) {
     next(e);
   }

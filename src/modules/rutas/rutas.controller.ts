@@ -13,13 +13,14 @@ export const getAll = async (req: Request, res: Response, next: NextFunction) =>
     const fecha = req.query.fecha as string | undefined
     const estado = req.query.estado as string | undefined
     const search = req.query.search as string | undefined
+    const ciudad = req.query.ciudad as string | undefined
 
     // CHOFER role can only see their own routes
     if (req.user?.rol === 'CHOFER') {
       choferId = req.user.userId
     }
 
-    res.json(await svc.getAll({ choferId, fecha, estado, search, page, limit }))
+    res.json(await svc.getAll({ choferId, fecha, estado, search, ciudad, page, limit }))
   } catch (e) { next(e) }
 }
 

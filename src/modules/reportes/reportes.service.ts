@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma";
+import { normalizeCiudad } from "../../utils/normalize-ciudad";
 
 export async function dashboard() {
   const [
@@ -88,12 +89,17 @@ export async function reportePorCliente(filters?: {
   hasta?: string;
   tipo?: string;
   choferId?: string;
+  ciudad?: string;
 }) {
+  const ciudadNorm = normalizeCiudad(filters?.ciudad);
   const clientes = await prisma.cliente.findMany({
     where: {
       ...(filters?.clienteId ? { id: filters.clienteId } : {}),
       ...(filters?.tipo
         ? { tipo: filters.tipo as "PRINCIPAL" | "SECUNDARIO" }
+        : {}),
+      ...(ciudadNorm
+        ? { ciudad: { equals: ciudadNorm, mode: "insensitive" } }
         : {}),
     },
     include: {
@@ -155,6 +161,7 @@ export async function reportePorCliente(filters?: {
   return clientes.map((c) => ({
     clienteId: c.id,
     nombre: c.nombre,
+    ciudad: c.ciudad,
     tipo: c.tipo,
     clientePrincipal: c.clientePrincipal,
     total: c.guias.length,
@@ -284,18 +291,23 @@ export async function reportePorFecha(
   hasta?: string,
   clienteId?: string,
   choferId?: string,
+  ciudad?: string,
 ) {
+  const ciudadNorm = normalizeCiudad(ciudad);
   return prisma.guiaEntrega.findMany({
     where: {
       ...(clienteId ? { clienteId } : {}),
       ...(choferId ? { ruta: { choferId } } : {}),
+      ...(ciudadNorm
+        ? { cliente: { ciudad: { equals: ciudadNorm, mode: "insensitive" } } }
+        : {}),
       createdAt: {
         ...(desde ? { gte: new Date(desde) } : {}),
         ...(hasta ? { lte: new Date(`${hasta}T23:59:59`) } : {}),
       },
     },
     include: {
-      cliente: { select: { id: true, nombre: true } },
+      cliente: { select: { id: true, nombre: true, ciudad: true } },
       ruta: {
         select: {
           id: true,
@@ -325,13 +337,18 @@ export async function reportePorGuia(filters?: {
   clienteId?: string;
   choferId?: string;
   tipo?: string;
+  ciudad?: string;
 }) {
+  const ciudadNorm = normalizeCiudad(filters?.ciudad);
   return prisma.guiaEntrega.findMany({
     where: {
       ...(filters?.clienteId ? { clienteId: filters.clienteId } : {}),
       ...(filters?.choferId ? { ruta: { choferId: filters.choferId } } : {}),
       ...(filters?.tipo
         ? { cliente: { tipo: filters.tipo as "PRINCIPAL" | "SECUNDARIO" } }
+        : {}),
+      ...(ciudadNorm
+        ? { cliente: { ciudad: { equals: ciudadNorm, mode: "insensitive" } } }
         : {}),
       ...(filters?.desde || filters?.hasta
         ? {
@@ -345,7 +362,7 @@ export async function reportePorGuia(filters?: {
         : {}),
     },
     include: {
-      cliente: { select: { id: true, nombre: true } },
+      cliente: { select: { id: true, nombre: true, ciudad: true } },
       ruta: {
         select: {
           id: true,

@@ -1,5 +1,7 @@
 import crypto from "crypto";
+import { EstadoRuta, Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
+import { normalizeCiudad } from "../../utils/normalize-ciudad";
 import {
   ensureRutaSeguimientoLogsTable,
   deleteRutasInTransaction,
@@ -26,7 +28,7 @@ const rutaInclude = {
   stops: {
     orderBy: { orden: "asc" as const },
     include: {
-      cliente: { select: { id: true, nombre: true } },
+      cliente: { select: { id: true, nombre: true, ciudad: true } },
       guias: {
         include: {
           fotos: true,
@@ -49,18 +51,29 @@ export interface GetAllFilters {
   fecha?: string;
   estado?: string;
   search?: string;
+  ciudad?: string;
   page?: number;
   limit?: number;
 }
 
 export const getAll = async (filters: GetAllFilters = {}) => {
-  const { choferId, fecha, estado, search, page = 1, limit = 10 } = filters;
+  const { choferId, fecha, estado, search, ciudad, page = 1, limit = 10 } =
+    filters;
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  const where: Prisma.RutaWhereInput = {};
   if (choferId) where.choferId = choferId;
   if (fecha) where.fecha = fecha;
-  if (estado) where.estado = estado;
+  if (estado) where.estado = estado as EstadoRuta;
+
+  const ciudadNorm = normalizeCiudad(ciudad);
+  if (ciudadNorm) {
+    where.stops = {
+      some: {
+        cliente: { ciudad: { equals: ciudadNorm, mode: "insensitive" } },
+      },
+    };
+  }
 
   if (search) {
     where.OR = [

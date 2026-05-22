@@ -12,6 +12,7 @@ const SELECT = {
   nombre: true,
   email: true,
   cedula: true,
+  celular: true,
   rol: true,
   activo: true,
   clienteId: true,
@@ -33,6 +34,7 @@ export const getAll = async (
       { nombre: { contains: q, mode: "insensitive" } },
       { email: { contains: q, mode: "insensitive" } },
       { cedula: { contains: q, mode: "insensitive" } },
+      { celular: { contains: q, mode: "insensitive" } },
     ];
   }
   const skip = (page - 1) * limit;
@@ -55,8 +57,16 @@ export const getAll = async (
 export const getById = (id: string) =>
   prisma.usuario.findUniqueOrThrow({ where: { id }, select: SELECT });
 
-export const update = (id: string, dto: UpdateUsuarioDto) =>
-  prisma.usuario.update({ where: { id }, data: dto, select: SELECT });
+export const update = (id: string, dto: UpdateUsuarioDto) => {
+  const { celular, ...rest } = dto;
+  const data = {
+    ...rest,
+    ...(celular !== undefined
+      ? { celular: celular === "" ? null : celular }
+      : {}),
+  };
+  return prisma.usuario.update({ where: { id }, data, select: SELECT });
+};
 
 export const toggleActivo = async (id: string) => {
   const u = await prisma.usuario.findUniqueOrThrow({ where: { id } });

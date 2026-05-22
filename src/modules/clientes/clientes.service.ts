@@ -7,6 +7,14 @@ import {
 import { AppError } from "../../utils/app-error";
 import { CreateClienteDto, UpdateClienteDto } from "./clientes.schema";
 import { emitWebhookEventAsync } from "../webhooks/webhooks.service";
+import { normalizeCiudad } from "../../utils/normalize-ciudad";
+
+function withNormalizedCiudad<T extends { ciudad?: string | null }>(
+  dto: T,
+): T & { ciudad?: string | null } {
+  if (!("ciudad" in dto)) return dto;
+  return { ...dto, ciudad: normalizeCiudad(dto.ciudad) };
+}
 
 const clienteInclude = {
   clientePrincipal: { select: { id: true, nombre: true } },
@@ -17,6 +25,7 @@ const clienteInclude = {
       ruc: true,
       activo: true,
       direccion: true,
+      ciudad: true,
       lat: true,
       lng: true,
     },
@@ -33,17 +42,21 @@ export const getAll = async (
   tipo?: TipoCliente,
   activo?: boolean,
   search?: string,
+  ciudad?: string,
 ) => {
   const skip = (page - 1) * limit;
   const where: Prisma.ClienteWhereInput = {};
   if (tipo) where.tipo = tipo;
   if (activo !== undefined) where.activo = activo;
+  const ciudadNorm = normalizeCiudad(ciudad);
+  if (ciudadNorm) where.ciudad = { equals: ciudadNorm, mode: "insensitive" };
   if (search?.trim()) {
     const q = search.trim();
     where.OR = [
       { nombre: { contains: q, mode: "insensitive" } },
       { ruc: { contains: q, mode: "insensitive" } },
       { emailContacto: { contains: q, mode: "insensitive" } },
+      { ciudad: { contains: q, mode: "insensitive" } },
     ];
   }
 
@@ -70,24 +83,37 @@ export const getAll = async (
 export const getById = (id: string) =>
   prisma.cliente.findUniqueOrThrow({ where: { id }, include: clienteInclude });
 
+export const getCiudadesDistinct = async () => {
+  const rows = await prisma.cliente.findMany({
+    where: { ciudad: { not: null } },
+    select: { ciudad: true },
+    distinct: ["ciudad"],
+    orderBy: { ciudad: "asc" },
+  });
+  return rows
+    .map((r) => r.ciudad)
+    .filter((c): c is string => Boolean(c));
+};
+
 export const create = async (dto: CreateClienteDto) => {
-  const existing = await prisma.cliente.findUnique({ where: { ruc: dto.ruc } });
+  const data = withNormalizedCiudad(dto);
+  const existing = await prisma.cliente.findUnique({ where: { ruc: data.ruc } });
   if (existing)
-    throw new AppError(409, `Ya existe un cliente con el RUC ${dto.ruc}`);
+    throw new AppError(409, `Ya existe un cliente con el RUC ${data.ruc}`);
 
   // Validar nombre único
   const existingNombre = await prisma.cliente.findFirst({
-    where: { nombre: dto.nombre },
+    where: { nombre: data.nombre },
   });
   if (existingNombre)
     throw new AppError(
       409,
-      `Ya existe un cliente con el nombre "${dto.nombre}"`,
+      `Ya existe un cliente con el nombre "${data.nombre}"`,
     );
 
-  if (dto.tipo === "SECUNDARIO" && dto.clientePrincipalId) {
+  if (data.tipo === "SECUNDARIO" && data.clientePrincipalId) {
     const principal = await prisma.cliente.findUnique({
-      where: { id: dto.clientePrincipalId },
+      where: { id: data.clientePrincipalId },
     });
     if (!principal) throw new AppError(404, "Cliente principal no encontrado");
     if (principal.tipo !== "PRINCIPAL")
@@ -95,7 +121,7 @@ export const create = async (dto: CreateClienteDto) => {
   }
 
   const created = await prisma.cliente.create({
-    data: dto as Prisma.ClienteCreateInput,
+    data: data as Prisma.ClienteCreateInput,
     include: clienteInclude,
   });
   emitWebhookEventAsync("cliente.created", {
@@ -109,35 +135,36 @@ export const create = async (dto: CreateClienteDto) => {
 };
 
 export const update = async (id: string, dto: UpdateClienteDto) => {
+  const data = withNormalizedCiudad(dto);
   // Validar nombre único si se está actualizando
-  if (dto.nombre) {
+  if (data.nombre) {
     const existingNombre = await prisma.cliente.findFirst({
       where: {
-        nombre: dto.nombre,
+        nombre: data.nombre,
         NOT: { id },
       },
     });
     if (existingNombre)
       throw new AppError(
         409,
-        `Ya existe otro cliente con el nombre "${dto.nombre}"`,
+        `Ya existe otro cliente con el nombre "${data.nombre}"`,
       );
   }
 
   // Validar RUC único si se está actualizando
-  if (dto.ruc) {
+  if (data.ruc) {
     const existingRuc = await prisma.cliente.findFirst({
       where: {
-        ruc: dto.ruc,
+        ruc: data.ruc,
         NOT: { id },
       },
     });
     if (existingRuc)
-      throw new AppError(409, `Ya existe otro cliente con el RUC ${dto.ruc}`);
+      throw new AppError(409, `Ya existe otro cliente con el RUC ${data.ruc}`);
   }
 
   // Detectar cambio de PRINCIPAL a SECUNDARIO para eliminar usuario de acceso
-  if (dto.tipo === "SECUNDARIO") {
+  if (data.tipo === "SECUNDARIO") {
     const currentCliente = await prisma.cliente.findUnique({ where: { id } });
     if (currentCliente && currentCliente.tipo === "PRINCIPAL") {
       // Eliminar usuario de acceso asociado
@@ -152,7 +179,7 @@ export const update = async (id: string, dto: UpdateClienteDto) => {
 
   const updated = await prisma.cliente.update({
     where: { id },
-    data: dto as Prisma.ClienteUpdateInput,
+    data: data as Prisma.ClienteUpdateInput,
     include: clienteInclude,
   });
   emitWebhookEventAsync("cliente.updated", {

@@ -12,6 +12,7 @@ model Cliente {
   nombre              String
   ruc                 String        @unique
   direccion           String
+  ciudad              String?
   telefonoContacto    String?
   emailContacto       String?
   activo              Boolean       @default(true)
