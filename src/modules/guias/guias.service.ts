@@ -56,7 +56,12 @@ export const getById = (id: string) =>
     include: guiaIncludeDetail,
   });
 
-export type VistaMisEnvios = "activos" | "historial" | "todos";
+export type VistaMisEnvios =
+  | "activos"
+  | "historial"
+  | "todos"
+  | "incidencias"
+  | "entregadosHoy";
 
 export interface MisEnviosQuery {
   clienteUsuarioId: string;
@@ -88,14 +93,20 @@ function buildWhereMisEnvios(
 
   if (vista === "activos") {
     parts.push({
-      AND: [
-        { estado: "PENDIENTE" }, // Solo guías pendientes
-        { ruta: { estado: "EN_CURSO" } }, // Y que la ruta esté en curso
-      ],
+      AND: [{ estado: "PENDIENTE" }, { ruta: { estado: "EN_CURSO" } }],
     });
   } else if (vista === "historial") {
     parts.push({
       OR: [{ estado: "ENTREGADO" }, { estado: "INCIDENCIA" }],
+    });
+  } else if (vista === "incidencias") {
+    parts.push({ estado: "INCIDENCIA" });
+  } else if (vista === "entregadosHoy") {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    parts.push({
+      estado: "ENTREGADO",
+      updatedAt: { gte: startOfToday },
     });
   }
 

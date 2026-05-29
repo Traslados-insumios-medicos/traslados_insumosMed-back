@@ -1,24 +1,43 @@
-import { cloudinary } from '../../config/cloudinary'
-import { prisma } from '../../config/prisma'
-import { TipoFoto } from '@prisma/client'
+import { cloudinary } from "../../config/cloudinary";
+import { prisma } from "../../config/prisma";
+import { TipoFoto } from "@prisma/client";
 
 interface UploadFotoParams {
-  buffer: Buffer
-  tipo: TipoFoto
-  guiaId?: string
-  rutaId?: string
+  buffer: Buffer;
+  tipo: TipoFoto;
+  guiaId?: string;
+  rutaId?: string;
 }
 
-export async function uploadFoto({ buffer, tipo, guiaId, rutaId }: UploadFotoParams) {
+export async function uploadFoto({
+  buffer,
+  tipo,
+  guiaId,
+  rutaId,
+}: UploadFotoParams) {
   // Subir a Cloudinary
-  const folder = tipo === 'GUIA' ? 'medlogix/guias' : 'medlogix/hojas_ruta'
+  // angle: 'exif' aplica físicamente la rotación EXIF al almacenar,
+  // eliminando el problema de orientación en PDFs y otros contextos que ignoran EXIF.
+  const folder = tipo === "GUIA" ? "medlogix/guias" : "medlogix/hojas_ruta";
 
-  const result = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
-    cloudinary.uploader.upload_stream({ folder, resource_type: 'image' }, (err, res) => {
-      if (err || !res) return reject(err ?? new Error('Error al subir imagen'))
-      resolve({ secure_url: res.secure_url, public_id: res.public_id })
-    }).end(buffer)
-  })
+  const result = await new Promise<{ secure_url: string; public_id: string }>(
+    (resolve, reject) => {
+      cloudinary.uploader
+        .upload_stream(
+          {
+            folder,
+            resource_type: "image",
+            transformation: [{ angle: "exif" }],
+          },
+          (err, res) => {
+            if (err || !res)
+              return reject(err ?? new Error("Error al subir imagen"));
+            resolve({ secure_url: res.secure_url, public_id: res.public_id });
+          },
+        )
+        .end(buffer);
+    },
+  );
 
   return prisma.foto.create({
     data: {
@@ -28,25 +47,25 @@ export async function uploadFoto({ buffer, tipo, guiaId, rutaId }: UploadFotoPar
       guiaId: guiaId ?? null,
       rutaId: rutaId ?? null,
     },
-  })
+  });
 }
 
 export async function deleteFoto(id: string) {
-  const foto = await prisma.foto.findUniqueOrThrow({ where: { id } })
+  const foto = await prisma.foto.findUniqueOrThrow({ where: { id } });
 
   if (foto.publicId) {
     try {
-      await cloudinary.uploader.destroy(foto.publicId)
+      await cloudinary.uploader.destroy(foto.publicId);
     } catch {
       /* No bloquear borrado en BD si Cloudinary falla o el asset ya no existe */
     }
   }
 
-  return prisma.foto.delete({ where: { id } })
+  return prisma.foto.delete({ where: { id } });
 }
 
 export const getFotosByGuia = (guiaId: string) =>
-  prisma.foto.findMany({ where: { guiaId } })
+  prisma.foto.findMany({ where: { guiaId } });
 
 export const getFotosByRuta = (rutaId: string) =>
-  prisma.foto.findMany({ where: { rutaId, tipo: 'HOJA_RUTA' } })
+  prisma.foto.findMany({ where: { rutaId, tipo: "HOJA_RUTA" } });
