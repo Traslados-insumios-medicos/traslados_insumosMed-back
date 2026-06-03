@@ -57,8 +57,15 @@ export interface GetAllFilters {
 }
 
 export const getAll = async (filters: GetAllFilters = {}) => {
-  const { choferId, fecha, estado, search, ciudad, page = 1, limit = 10 } =
-    filters;
+  const {
+    choferId,
+    fecha,
+    estado,
+    search,
+    ciudad,
+    page = 1,
+    limit = 10,
+  } = filters;
   const skip = (page - 1) * limit;
 
   const where: Prisma.RutaWhereInput = {};
@@ -141,9 +148,6 @@ export const create = async (dto: CreateRutaDto) => {
   });
   if (!chofer) throw new AppError(404, "Chofer no encontrado");
 
-  const timestamp = String(Date.now()).slice(-6);
-  let guiaCounter = 0;
-
   const created = await prisma.$transaction(
     async (tx: any) => {
       const ruta = await tx.ruta.create({
@@ -178,21 +182,21 @@ export const create = async (dto: CreateRutaDto) => {
             : [{ descripcion: s.guiaDescripcion ?? "Insumos médicos" }];
 
         for (const guia of guiasInput) {
-          guiaCounter++;
-          // Usar numeroGuia del payload si viene, si no generar automáticamente
-          const numeroGuia = guia.numeroGuia?.trim()
-            ? guia.numeroGuia.trim()
-            : `G-${timestamp}-${guiaCounter}`;
+          // Usar numeroGuia del payload si viene con valor, si no dejar null (sin guía)
+          const rawNumero = guia.numeroGuia?.trim();
+          const numeroGuia = rawNumero ? rawNumero : null;
 
-          // Validar unicidad del número de guía
-          const existing = await tx.guiaEntrega.findFirst({
-            where: { numeroGuia },
-          });
-          if (existing) {
-            throw new AppError(
-              409,
-              `El número de guía "${numeroGuia}" ya existe`,
-            );
+          // Validar unicidad solo cuando hay un número real (null se permite múltiples veces)
+          if (numeroGuia) {
+            const existing = await tx.guiaEntrega.findFirst({
+              where: { numeroGuia },
+            });
+            if (existing) {
+              throw new AppError(
+                409,
+                `El número de guía "${numeroGuia}" ya existe`,
+              );
+            }
           }
 
           await tx.guiaEntrega.create({

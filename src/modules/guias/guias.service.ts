@@ -69,12 +69,14 @@ export interface MisEnviosQuery {
   page?: number;
   limit?: number;
   vista?: VistaMisEnvios;
+  filtroGuia?: "con-guia" | "sin-guia";
 }
 
 function buildWhereMisEnvios(
   alcance: string[],
   search: string | undefined,
   vista: VistaMisEnvios,
+  filtroGuia?: "con-guia" | "sin-guia",
 ): Prisma.GuiaEntregaWhereInput {
   const where: Prisma.GuiaEntregaWhereInput = { clienteId: { in: alcance } };
   const parts: Prisma.GuiaEntregaWhereInput[] = [];
@@ -110,16 +112,30 @@ function buildWhereMisEnvios(
     });
   }
 
+  if (filtroGuia === "con-guia") {
+    // Prisma 5: usar NOT a nivel de condición para "campo IS NOT NULL"
+    parts.push({ NOT: { numeroGuia: null } });
+  } else if (filtroGuia === "sin-guia") {
+    parts.push({ numeroGuia: null });
+  }
+
   if (parts.length) where.AND = parts;
   return where;
 }
 
 export async function getMisEnviosList(q: MisEnviosQuery) {
-  const { clienteUsuarioId, search, page = 1, limit = 10, vista = "todos" } = q;
+  const {
+    clienteUsuarioId,
+    search,
+    page = 1,
+    limit = 10,
+    vista = "todos",
+    filtroGuia,
+  } = q;
   const alcance = await resolveAlcanceClienteIds(clienteUsuarioId);
   const take = Math.max(1, Math.min(100, limit));
   const skip = (Math.max(1, page) - 1) * take;
-  const where = buildWhereMisEnvios(alcance, search, vista);
+  const where = buildWhereMisEnvios(alcance, search, vista, filtroGuia);
 
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);

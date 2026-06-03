@@ -292,12 +292,20 @@ export async function reportePorFecha(
   clienteId?: string,
   choferId?: string,
   ciudad?: string,
+  filtroGuia?: "con-guia" | "sin-guia",
 ) {
   const ciudadNorm = normalizeCiudad(ciudad);
+  const filtroNumeroGuia =
+    filtroGuia === "con-guia"
+      ? { NOT: { numeroGuia: null } }
+      : filtroGuia === "sin-guia"
+        ? { numeroGuia: null }
+        : {};
   return prisma.guiaEntrega.findMany({
     where: {
       ...(clienteId ? { clienteId } : {}),
       ...(choferId ? { ruta: { choferId } } : {}),
+      ...filtroNumeroGuia,
       ...(ciudadNorm
         ? { cliente: { ciudad: { equals: ciudadNorm, mode: "insensitive" } } }
         : {}),
@@ -338,8 +346,17 @@ export async function reportePorGuia(filters?: {
   choferId?: string;
   tipo?: string;
   ciudad?: string;
+  filtroGuia?: "con-guia" | "sin-guia";
 }) {
   const ciudadNorm = normalizeCiudad(filters?.ciudad);
+
+  const filtroNumeroGuia =
+    filters?.filtroGuia === "con-guia"
+      ? { NOT: { numeroGuia: null } }
+      : filters?.filtroGuia === "sin-guia"
+        ? { numeroGuia: null }
+        : {};
+
   return prisma.guiaEntrega.findMany({
     where: {
       ...(filters?.clienteId ? { clienteId: filters.clienteId } : {}),
@@ -360,6 +377,7 @@ export async function reportePorGuia(filters?: {
             },
           }
         : {}),
+      ...filtroNumeroGuia,
     },
     include: {
       cliente: { select: { id: true, nombre: true, ciudad: true } },

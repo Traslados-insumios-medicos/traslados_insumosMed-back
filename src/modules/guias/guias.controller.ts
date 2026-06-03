@@ -61,6 +61,13 @@ export const getMisEnvios = async (
       ? (rawVista as VistaMisEnvios)
       : "todos";
 
+    const rawFiltroGuia =
+      typeof req.query.filtroGuia === "string" ? req.query.filtroGuia : "";
+    const filtroGuia =
+      rawFiltroGuia === "con-guia" || rawFiltroGuia === "sin-guia"
+        ? (rawFiltroGuia as "con-guia" | "sin-guia")
+        : undefined;
+
     res.json(
       await svc.getMisEnviosList({
         clienteUsuarioId: clienteId,
@@ -68,6 +75,7 @@ export const getMisEnvios = async (
         page,
         limit,
         vista,
+        filtroGuia,
       }),
     );
   } catch (e) {

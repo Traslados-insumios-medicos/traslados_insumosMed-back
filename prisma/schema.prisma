@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Cliente {
@@ -85,7 +86,7 @@ model Stop {
 
 model GuiaEntrega {
   id             String     @id @default(cuid())
-  numeroGuia     String     @unique
+  numeroGuia     String?    @unique
   descripcion    String
   estado         EstadoGuia @default(PENDIENTE)
   createdAt      DateTime   @default(now())
