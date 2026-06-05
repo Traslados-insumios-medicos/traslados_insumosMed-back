@@ -282,9 +282,7 @@ export const updateDetalle = async (id: string, dto: UpdateDetalleGuiaDto) => {
         },
       });
 
-      console.log(
-        `✅ Novedad creada para guía ${guia.numeroGuia} - Tipo: ${tipoIncidencia}`,
-      );
+
     }
   }
 

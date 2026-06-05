@@ -1,6 +1,5 @@
 import { prisma } from "../../config/prisma";
 import {
-  ensureRutaSeguimientoLogsTable,
   deleteRutasInTransaction,
 } from "../../db/rutaHardDelete";
 import { UpdateUsuarioDto } from "./usuarios.schema";
@@ -79,9 +78,7 @@ export const toggleActivo = async (id: string) => {
 
   // Si se desactivó, emitir evento WebSocket para desconectar al usuario
   if (!newActivo) {
-    console.log(
-      `🔴 Usuario ${u.nombre} (${id}) desactivado - emitiendo evento WebSocket`,
-    );
+
     const { emitAccountDeactivated } = await import("../../websocket");
     emitAccountDeactivated(id);
   }
@@ -95,7 +92,7 @@ export const remove = async (id: string) => {
   if (u.rol !== Rol.CHOFER)
     throw new AppError(400, "Solo se pueden eliminar choferes");
 
-  await ensureRutaSeguimientoLogsTable();
+
   await prisma.$transaction(
     async (tx) => {
       const rutas = await tx.ruta.findMany({

@@ -1,7 +1,6 @@
 import { Prisma, TipoCliente, Rol } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import {
-  ensureRutaSeguimientoLogsTable,
   deleteRutasInTransaction,
 } from "../../db/rutaHardDelete";
 import { AppError } from "../../utils/app-error";
@@ -297,7 +296,7 @@ async function removeClienteTx(
 }
 
 export const remove = async (id: string) => {
-  await ensureRutaSeguimientoLogsTable();
+
   const deletedList = await prisma.$transaction(
     (tx) => removeClienteTx(tx, id),
     {

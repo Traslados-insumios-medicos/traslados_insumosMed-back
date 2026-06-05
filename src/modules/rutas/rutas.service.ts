@@ -3,7 +3,6 @@ import { EstadoRuta, Prisma } from "@prisma/client";
 import { prisma } from "../../config/prisma";
 import { normalizeCiudad } from "../../utils/normalize-ciudad";
 import {
-  ensureRutaSeguimientoLogsTable,
   deleteRutasInTransaction,
 } from "../../db/rutaHardDelete";
 import { AppError } from "../../utils/app-error";
@@ -329,7 +328,7 @@ export const updateSeguimientoChofer = async (
     // Ignorar si WS no está listo (tests / arranque)
   }
 
-  await ensureRutaSeguimientoLogsTable();
+
   await prisma.$executeRaw`
     INSERT INTO ruta_seguimiento_logs (id, ruta_id, chofer_id, seguimiento_chofer)
     VALUES (${crypto.randomUUID()}, ${rutaId}, ${choferUserId}, ${seguimientoChofer})
@@ -349,7 +348,7 @@ export const getSeguimientoHistory = async (
   rutaId: string,
   limit = 100,
 ): Promise<SeguimientoRutaLog[]> => {
-  await ensureRutaSeguimientoLogsTable();
+
   const max = Math.max(1, Math.min(500, limit));
   const rows = await prisma.$queryRaw<
     {
@@ -397,7 +396,7 @@ export const remove = async (id: string) => {
     select: { id: true, choferId: true, fecha: true },
   });
   if (!ruta) throw new AppError(404, "Ruta no encontrada");
-  await ensureRutaSeguimientoLogsTable();
+
   await prisma.$transaction(
     async (tx: any) => {
       await deleteRutasInTransaction(tx, [id]);

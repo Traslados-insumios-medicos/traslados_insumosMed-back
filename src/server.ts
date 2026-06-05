@@ -3,6 +3,7 @@ import app from './app'
 import { env } from './config/env'
 import { prisma } from './config/prisma'
 import { initWebSocket } from './websocket'
+import { ensureRutaSeguimientoLogsTable } from './db/rutaHardDelete'
 
 const httpServer = createServer(app)
 initWebSocket(httpServer)
@@ -10,6 +11,9 @@ initWebSocket(httpServer)
 async function main() {
   await prisma.$connect()
   console.log('[OK] Base de datos conectada')
+
+  await ensureRutaSeguimientoLogsTable()
+  console.log('[OK] Tablas DDL de logs verificadas')
 
   httpServer.listen(env.PORT, () => {
     console.log(`[OK] Servidor corriendo en http://localhost:${env.PORT}`)
