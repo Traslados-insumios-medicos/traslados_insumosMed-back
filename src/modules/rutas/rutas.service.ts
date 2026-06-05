@@ -161,7 +161,48 @@ export const create = async (dto: CreateRutaDto) => {
         },
       });
 
-      // Create stops and guias for each stop
+      // Recopilar todos los numeroGuia no-nulos del payload para validar unicidad en batch (1 query)
+      type GuiaInput = { descripcion: string; numeroGuia?: string };
+      type StopGuiaPair = { stopIndex: number; guia: GuiaInput };
+      const allGuiasPairs: StopGuiaPair[] = dto.stops.flatMap((s, si) => {
+        const guiasInput: GuiaInput[] =
+          s.guias && s.guias.length > 0
+            ? s.guias
+            : [{ descripcion: s.guiaDescripcion ?? "Insumos médicos" }];
+        return guiasInput.map((g) => ({ stopIndex: si, guia: g }));
+      });
+
+      const numerosConValor = allGuiasPairs
+        .map((p) => p.guia.numeroGuia?.trim())
+        .filter((n): n is string => Boolean(n));
+
+      // Detectar duplicados dentro del mismo payload
+      const seenInPayload = new Set<string>();
+      for (const n of numerosConValor) {
+        if (seenInPayload.has(n)) {
+          throw new AppError(
+            409,
+            `El número de guía "${n}" está repetido en el formulario`,
+          );
+        }
+        seenInPayload.add(n);
+      }
+
+      // Validar unicidad contra la base de datos en una sola query (en lugar de N findFirst)
+      if (numerosConValor.length > 0) {
+        const existing = await tx.guiaEntrega.findFirst({
+          where: { numeroGuia: { in: numerosConValor } },
+          select: { numeroGuia: true },
+        });
+        if (existing) {
+          throw new AppError(
+            409,
+            `El número de guía "${existing.numeroGuia}" ya existe`,
+          );
+        }
+      }
+
+      // Crear stops y guías — stops secuencial (necesita stopId), guías en batch por stop
       for (const s of dto.stops) {
         const stop = await tx.stop.create({
           data: {
@@ -175,40 +216,20 @@ export const create = async (dto: CreateRutaDto) => {
           },
         });
 
-        // Resolve guias list: prefer array format, fall back to single guiaDescripcion
-        const guiasInput =
+        const guiasInput: GuiaInput[] =
           s.guias && s.guias.length > 0
             ? s.guias
             : [{ descripcion: s.guiaDescripcion ?? "Insumos médicos" }];
 
-        for (const guia of guiasInput) {
-          // Usar numeroGuia del payload si viene con valor, si no dejar null (sin guía)
-          const rawNumero = guia.numeroGuia?.trim();
-          const numeroGuia = rawNumero ? rawNumero : null;
-
-          // Validar unicidad solo cuando hay un número real (null se permite múltiples veces)
-          if (numeroGuia) {
-            const existing = await tx.guiaEntrega.findFirst({
-              where: { numeroGuia },
-            });
-            if (existing) {
-              throw new AppError(
-                409,
-                `El número de guía "${numeroGuia}" ya existe`,
-              );
-            }
-          }
-
-          await tx.guiaEntrega.create({
-            data: {
-              numeroGuia,
-              descripcion: guia.descripcion,
-              clienteId: s.clienteId,
-              rutaId: ruta.id,
-              stopId: stop.id,
-            },
-          });
-        }
+        await tx.guiaEntrega.createMany({
+          data: guiasInput.map((guia) => ({
+            numeroGuia: guia.numeroGuia?.trim() || null,
+            descripcion: guia.descripcion,
+            clienteId: s.clienteId,
+            rutaId: ruta.id,
+            stopId: stop.id,
+          })),
+        });
       }
 
       // Return full ruta with includes
@@ -219,7 +240,7 @@ export const create = async (dto: CreateRutaDto) => {
       if (!fullRuta) throw new AppError(404, "Ruta no encontrada");
       return fullRuta;
     },
-    { maxWait: 15_000, timeout: 30_000 },
+    { maxWait: 15_000, timeout: 120_000 },
   );
   emitWebhookEventAsync("ruta.created", {
     id: created.id,
