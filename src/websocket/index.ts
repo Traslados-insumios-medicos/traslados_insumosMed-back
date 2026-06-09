@@ -73,9 +73,10 @@ export function initWebSocket(httpServer: HttpServer) {
 
     // Chofer emite su posición GPS
     socket.on('posicion_chofer', (data: { rutaId: string; choferId: string; choferNombre?: string; lat: number; lng: number }) => {
-      console.log('📌 BACKEND RECIBIÓ POSICIÓN:', data, 'DE USUARIO:', user.rol)
+      console.log('📌 [WS BACKEND] RECIBIÓ POSICIÓN - rutaId:', data.rutaId, 'choferId:', data.choferId, 'lat:', data.lat, 'lng:', data.lng, 'DE USUARIO:', user.rol)
+      
       if (user.rol !== 'CHOFER') {
-        console.log('❌ IGNORANDO POSICIÓN: No es chofer, es', user.rol)
+        console.log('❌ [WS BACKEND] IGNORANDO POSICIÓN: No es chofer, es', user.rol)
         return
       }
 
@@ -88,7 +89,9 @@ export function initWebSocket(httpServer: HttpServer) {
         timestamp: Date.now(),
       }
 
-      console.log('✅ BACKEND RETRANSMITIENDO A ruta:' + data.rutaId + ' y a admins', payload)
+      const adminsInRoom = io.sockets.adapter.rooms.get('admins')
+      const adminsCount = adminsInRoom ? adminsInRoom.size : 0
+      console.log('📡 [WS BACKEND] EMITIENDO A ADMINS - Sockets en sala admins:', adminsCount, 'Payload:', payload)
 
       // Emitir a la sala individual (Cliente)
       io.to(`ruta:${data.rutaId}`).emit('posicion_chofer', payload)
