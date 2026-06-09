@@ -72,15 +72,29 @@ export function initWebSocket(httpServer: HttpServer) {
     })
 
     // Chofer emite su posición GPS
-    socket.on('posicion_chofer', (data: { rutaId: string; lat: number; lng: number }) => {
-      if (user.rol !== 'CHOFER') return
+    socket.on('posicion_chofer', (data: { rutaId: string; choferId: string; choferNombre?: string; lat: number; lng: number }) => {
+      console.log('📌 BACKEND RECIBIÓ POSICIÓN:', data, 'DE USUARIO:', user.rol)
+      if (user.rol !== 'CHOFER') {
+        console.log('❌ IGNORANDO POSICIÓN: No es chofer, es', user.rol)
+        return
+      }
 
-      io.to(`ruta:${data.rutaId}`).emit('posicion_chofer', {
+      const payload = {
+        rutaId: data.rutaId,
+        choferId: data.choferId,
+        choferNombre: data.choferNombre,
         lat: data.lat,
         lng: data.lng,
         timestamp: Date.now(),
-      })
+      }
 
+      console.log('✅ BACKEND RETRANSMITIENDO A ruta:' + data.rutaId + ' y a admins', payload)
+
+      // Emitir a la sala individual (Cliente)
+      io.to(`ruta:${data.rutaId}`).emit('posicion_chofer', payload)
+      
+      // Emitir a la sala global (Administrador)
+      io.to('admins').emit('posicion_chofer', payload)
     })
 
     // Chofer cambia estado de una guía
