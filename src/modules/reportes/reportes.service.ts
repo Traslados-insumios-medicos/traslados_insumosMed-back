@@ -92,6 +92,12 @@ export async function reportePorCliente(filters?: {
   ciudad?: string;
 }) {
   const ciudadNorm = normalizeCiudad(filters?.ciudad);
+
+  const filtroFecha = {
+    ...(filters?.desde ? { gte: filters.desde } : {}),
+    ...(filters?.hasta ? { lte: filters.hasta } : {}),
+  };
+
   const clientes = await prisma.cliente.findMany({
     where: {
       ...(filters?.clienteId ? { id: filters.clienteId } : {}),
@@ -139,17 +145,16 @@ export async function reportePorCliente(filters?: {
             select: { id: true, urlPreview: true, tipo: true, createdAt: true },
           },
         },
+        // CORRECCI N B1: choferId y fecha se fusionan en un unico objeto
+        // "ruta" para evitar que dos spreads con la misma clave se sobreescriban
+        // en el WHERE de Prisma. El criterio de fecha es Ruta.fecha
+        // (fecha de planificacion operativa real) en lugar de GuiaEntrega.createdAt.
         where: {
-          ...(filters?.choferId
-            ? { ruta: { choferId: filters.choferId } }
-            : {}),
-          ...(filters?.desde || filters?.hasta
+          ...(filters?.choferId || Object.keys(filtroFecha).length > 0
             ? {
-                createdAt: {
-                  ...(filters.desde ? { gte: new Date(filters.desde) } : {}),
-                  ...(filters.hasta
-                    ? { lte: new Date(filters.hasta + "T23:59:59") }
-                    : {}),
+                ruta: {
+                  ...(filters?.choferId ? { choferId: filters.choferId } : {}),
+                  ...(Object.keys(filtroFecha).length > 0 ? { fecha: filtroFecha } : {}),
                 },
               }
             : {}),
@@ -208,6 +213,7 @@ export async function reportePorChofer(filters?: {
     },
     include: {
       rutas: {
+        // reportePorChofer ya usaba Ruta.fecha como criterio - sin cambio.
         where: {
           ...(filters?.desde || filters?.hasta
             ? {
@@ -219,7 +225,14 @@ export async function reportePorChofer(filters?: {
             : {}),
         },
         include: {
-          stops: { include: { cliente: true } },
+          // CORRECCI N B4: Incluir ciudad en el select del cliente de cada
+          // stop para que la columna "Ciudad / Sector" este disponible en el
+          // reporte y exportaciones de chofer.
+          stops: {
+            include: {
+              cliente: { select: { id: true, nombre: true, ciudad: true } },
+            },
+          },
           guias: {
             include: {
               novedades: {
@@ -261,6 +274,8 @@ export async function reportePorChofer(filters?: {
           descripcion: g.descripcion,
           estado: g.estado,
           cliente: stop?.cliente?.nombre ?? g.clienteId,
+          // CORRECCI N B4: ciudad del cliente expuesta por guia en reporte chofer
+          ciudadCliente: stop?.cliente?.ciudad ?? null,
           receptorNombre: g.receptorNombre,
           horaLlegada: g.horaLlegada,
           horaSalida: g.horaSalida,
@@ -301,18 +316,34 @@ export async function reportePorFecha(
       : filtroGuia === "sin-guia"
         ? { numeroGuia: null }
         : {};
+
+  // CORRECCI N B2: El criterio de fecha cambia de GuiaEntrega.createdAt a
+  // Ruta.fecha (string "YYYY-MM-DD"), que representa la fecha de planificacion
+  // real de la ruta. Los filtros choferId y fecha se unifican en un unico
+  // objeto "ruta" para evitar colision de claves en Prisma.
+  const filtroFecha = {
+    ...(desde ? { gte: desde } : {}),
+    ...(hasta ? { lte: hasta } : {}),
+  };
+
+  const filtroRutaFecha =
+    choferId || Object.keys(filtroFecha).length > 0
+      ? {
+          ruta: {
+            ...(choferId ? { choferId } : {}),
+            ...(Object.keys(filtroFecha).length > 0 ? { fecha: filtroFecha } : {}),
+          },
+        }
+      : {};
+
   return prisma.guiaEntrega.findMany({
     where: {
       ...(clienteId ? { clienteId } : {}),
-      ...(choferId ? { ruta: { choferId } } : {}),
+      ...filtroRutaFecha,
       ...filtroNumeroGuia,
       ...(ciudadNorm
         ? { cliente: { ciudad: { equals: ciudadNorm, mode: "insensitive" } } }
         : {}),
-      createdAt: {
-        ...(desde ? { gte: new Date(desde) } : {}),
-        ...(hasta ? { lte: new Date(`${hasta}T23:59:59`) } : {}),
-      },
     },
     include: {
       cliente: { select: { id: true, nombre: true, ciudad: true } },
@@ -334,8 +365,9 @@ export async function reportePorFecha(
         select: { id: true, urlPreview: true, tipo: true, createdAt: true },
       },
     },
-    orderBy: { createdAt: "desc" },
-    take: 500,
+    // Ordenar por fecha de ruta (criterio de negocio) descendente.
+    // CORRECCI N B2: Se elimina take:500.
+    orderBy: { ruta: { fecha: "desc" } },
   });
 }
 
@@ -357,25 +389,33 @@ export async function reportePorGuia(filters?: {
         ? { numeroGuia: null }
         : {};
 
+  // CORRECCI N B3: El criterio de fecha cambia de GuiaEntrega.createdAt a
+  // Ruta.fecha. Los filtros choferId y fecha se unifican en un unico objeto
+  // "ruta" para evitar que spreads separados con la misma clave se sobreescriban.
+  const filtroFecha = {
+    ...(filters?.desde ? { gte: filters.desde } : {}),
+    ...(filters?.hasta ? { lte: filters.hasta } : {}),
+  };
+
+  const filtroRutaGuia =
+    filters?.choferId || Object.keys(filtroFecha).length > 0
+      ? {
+          ruta: {
+            ...(filters?.choferId ? { choferId: filters.choferId } : {}),
+            ...(Object.keys(filtroFecha).length > 0 ? { fecha: filtroFecha } : {}),
+          },
+        }
+      : {};
+
   return prisma.guiaEntrega.findMany({
     where: {
       ...(filters?.clienteId ? { clienteId: filters.clienteId } : {}),
-      ...(filters?.choferId ? { ruta: { choferId: filters.choferId } } : {}),
+      ...filtroRutaGuia,
       ...(filters?.tipo
         ? { cliente: { tipo: filters.tipo as "PRINCIPAL" | "SECUNDARIO" } }
         : {}),
       ...(ciudadNorm
         ? { cliente: { ciudad: { equals: ciudadNorm, mode: "insensitive" } } }
-        : {}),
-      ...(filters?.desde || filters?.hasta
-        ? {
-            createdAt: {
-              ...(filters.desde ? { gte: new Date(filters.desde) } : {}),
-              ...(filters.hasta
-                ? { lte: new Date(`${filters.hasta}T23:59:59`) }
-                : {}),
-            },
-          }
         : {}),
       ...filtroNumeroGuia,
     },
@@ -399,7 +439,8 @@ export async function reportePorGuia(filters?: {
         select: { id: true, urlPreview: true, tipo: true, createdAt: true },
       },
     },
-    orderBy: { createdAt: "desc" },
-    take: 500,
+    // Ordenar por fecha de ruta (criterio de negocio) descendente.
+    // CORRECCI N B3: Se elimina take:500.
+    orderBy: { ruta: { fecha: "desc" } },
   });
 }

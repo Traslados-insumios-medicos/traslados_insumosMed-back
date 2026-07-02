@@ -105,6 +105,7 @@ async function main() {
       nombre: 'Clínica Pichincha',
       ruc: '1791234560003',
       direccion: 'Calle Veintimilla E4-66 y Paez, Quito',
+      ciudad: 'Quito',
       telefonoContacto: '+593 2 256 2296',
       activo: true,
     }
@@ -115,6 +116,7 @@ async function main() {
       nombre: 'Hospital Metropolitano',
       ruc: '1791234560004',
       direccion: 'Av. Mariana de Jesús y Nicolás Arteta, Quito',
+      ciudad: 'Quito',
       telefonoContacto: '+593 2 399 8000',
       activo: true,
     }
