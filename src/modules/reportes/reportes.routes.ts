@@ -12,4 +12,7 @@ router.get('/choferes', ctrl.porChofer)
 router.get('/fechas', ctrl.porFecha)
 router.get('/guias', ctrl.porGuia)
 
+// ─── Generación de Reporte General en PDF (Streaming) ─────────────────────────
+router.get('/pdf/general', ctrl.exportPdfGeneral)
+
 export default router

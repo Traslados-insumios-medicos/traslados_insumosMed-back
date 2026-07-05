@@ -32,4 +32,7 @@ export const env = {
   WEBHOOK_SECRET: process.env.WEBHOOK_SECRET ?? '',
   WEBHOOK_TIMEOUT_MS: Number(process.env.WEBHOOK_TIMEOUT_MS ?? 5000),
   WEBHOOK_RETRIES: Number(process.env.WEBHOOK_RETRIES ?? 3),
+
+  // SSE Progress Watchdog Timeout
+  SSE_PROGRESS_TIMEOUT_MS: Number(process.env.SSE_PROGRESS_TIMEOUT_MS ?? 15 * 60 * 1000),
 }

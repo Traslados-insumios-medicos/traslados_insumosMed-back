@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as svc from "./reportes.service";
+import { generateReporteGeneralPdf } from "./pdf/pdf-general.service";
+import { progressManager } from "../../shared/progress/progress.manager";
 
 export const getDashboard = async (
   _req: Request,
@@ -102,3 +104,57 @@ export const porGuia = async (
     next(e);
   }
 };
+
+export const exportPdfGeneral = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    res.setTimeout(0);
+
+    const { desde, hasta, clienteId, choferId, tipo, ciudad, filtroGuia, jobId, titulo } =
+      req.query as Record<string, string>;
+
+    const fg =
+      filtroGuia === 'con-guia' || filtroGuia === 'sin-guia'
+        ? (filtroGuia as 'con-guia' | 'sin-guia')
+        : undefined;
+
+    const filename = titulo
+      ? `${titulo.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'reporte'}.pdf`
+      : 'reporte-general.pdf';
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${filename}"`,
+    );
+
+    await generateReporteGeneralPdf(res, {
+      desde,
+      hasta,
+      clienteId,
+      choferId,
+      tipo,
+      ciudad,
+      filtroGuia: fg,
+      jobId,
+      titulo,
+    });
+  } catch (e) {
+    if (req.query.jobId) {
+      progressManager.error(
+        String(req.query.jobId),
+        e instanceof Error ? e.message : 'Error al generar el PDF',
+      );
+    }
+    if (res.headersSent) {
+      console.error('[PDF] Error durante streaming:', e);
+      res.destroy();
+    } else {
+      next(e);
+    }
+  }
+};
+

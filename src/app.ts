@@ -13,6 +13,7 @@ import fotosRoutes from './modules/fotos/fotos.routes'
 import novedadesRoutes from './modules/novedades/novedades.routes'
 import reportesRoutes from './modules/reportes/reportes.routes'
 import webhooksRoutes from './modules/webhooks/webhooks.routes'
+import progressRoutes from './shared/progress/progress.routes'
 
 const app = express()
 // Render/Reverse proxies: necesario para IP real y middlewares como rate-limit.
@@ -46,6 +47,7 @@ app.use('/api/fotos', fotosRoutes)
 app.use('/api/novedades', novedadesRoutes)
 app.use('/api/reportes', reportesRoutes)
 app.use('/api/webhooks', webhooksRoutes)
+app.use('/api/progress', progressRoutes)
 
 // Error handler global (siempre al final)
 app.use(errorHandler)
