@@ -1,9 +1,11 @@
 export type ProgressTaskType =
-  | 'PDF_GENERAL'
-  | 'EXCEL_REPORT'
-  | 'PHOTO_UPLOAD'
-  | 'EXCEL_IMPORT'
-  | 'GENERIC_TASK';
+  | "PDF_GENERAL"
+  | "PDF_EXPORT_IMAGES"
+  | "EXCEL_REPORT"
+  | "PHOTO_UPLOAD"
+  | "EXCEL_IMPORT"
+  | "GENERIC_TASK"
+  | "LIBERAR_IMAGENES";
 
 export interface ProgressEvent {
   step?: string;
