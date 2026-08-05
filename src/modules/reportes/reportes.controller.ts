@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import * as svc from "./reportes.service";
 import { generateReporteGeneralPdf } from "./pdf/pdf-general.service";
+import { generateExportImagesPdf } from "./pdf/pdf-export-images.service";
 import { progressManager } from "../../shared/progress/progress.manager";
 
 export const getDashboard = async (
@@ -113,23 +114,34 @@ export const exportPdfGeneral = async (
   try {
     res.setTimeout(0);
 
-    const { desde, hasta, clienteId, choferId, tipo, ciudad, filtroGuia, jobId, titulo } =
-      req.query as Record<string, string>;
+    const {
+      desde,
+      hasta,
+      clienteId,
+      choferId,
+      tipo,
+      ciudad,
+      filtroGuia,
+      jobId,
+      titulo,
+    } = req.query as Record<string, string>;
 
     const fg =
-      filtroGuia === 'con-guia' || filtroGuia === 'sin-guia'
-        ? (filtroGuia as 'con-guia' | 'sin-guia')
+      filtroGuia === "con-guia" || filtroGuia === "sin-guia"
+        ? (filtroGuia as "con-guia" | "sin-guia")
         : undefined;
 
     const filename = titulo
-      ? `${titulo.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'reporte'}.pdf`
-      : 'reporte-general.pdf';
+      ? `${
+          titulo
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "") || "reporte"
+        }.pdf`
+      : "reporte-general.pdf";
 
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${filename}"`,
-    );
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
     await generateReporteGeneralPdf(res, {
       desde,
@@ -146,11 +158,11 @@ export const exportPdfGeneral = async (
     if (req.query.jobId) {
       progressManager.error(
         String(req.query.jobId),
-        e instanceof Error ? e.message : 'Error al generar el PDF',
+        e instanceof Error ? e.message : "Error al generar el PDF",
       );
     }
     if (res.headersSent) {
-      console.error('[PDF] Error durante streaming:', e);
+      console.error("[PDF] Error durante streaming:", e);
       res.destroy();
     } else {
       next(e);
@@ -158,3 +170,94 @@ export const exportPdfGeneral = async (
   }
 };
 
+export const getRutasConImagenesFiltradas = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { desde, hasta, clienteId, choferId, tipo, ciudad, filtroGuia } = req.query as Record<string, string>;
+    const rutas = await svc.getRutasConImagenesFiltradas({
+      desde,
+      hasta,
+      clienteId,
+      choferId,
+      tipo,
+      ciudad,
+      filtroGuia: filtroGuia as 'con-guia' | 'sin-guia' | undefined,
+    });
+    res.json(rutas);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const liberarImagenes = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { fotoIds } = req.body as { fotoIds: string[] };
+    const { jobId } = req.query as { jobId?: string };
+    
+    if (!Array.isArray(fotoIds) || fotoIds.length === 0) {
+      return res.status(400).json({ error: 'fotoIds debe ser un arreglo no vacío' });
+    }
+    const result = await svc.liberarImagenesCloudinary(fotoIds, jobId);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+export const exportPdfImages = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    res.setTimeout(0);
+    const { jobId } = req.query as Record<string, string>;
+    const { fotoIds, titulo } = req.body as {
+      fotoIds: string[];
+      titulo?: string;
+    };
+
+    if (!Array.isArray(fotoIds) || fotoIds.length === 0) {
+      return res
+        .status(400)
+        .json({ error: "fotoIds debe ser un arreglo no vacío" });
+    }
+
+    const safeTitle = titulo?.trim() || "respaldo-imagenes";
+    const filename = `${
+      safeTitle
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "respaldo-imagenes"
+    }.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    await generateExportImagesPdf(res, {
+      fotoIds,
+      jobId,
+      titulo: titulo?.trim(),
+    });
+  } catch (e) {
+    if (req.query.jobId) {
+      progressManager.error(
+        String(req.query.jobId),
+        e instanceof Error ? e.message : "Error al generar el PDF de imágenes",
+      );
+    }
+    if (res.headersSent) {
+      console.error("[PDF ExportImages] Error durante streaming:", e);
+      res.destroy();
+    } else {
+      next(e);
+    }
+  }
+};

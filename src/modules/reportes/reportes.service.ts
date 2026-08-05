@@ -1,5 +1,10 @@
 import { prisma } from "../../config/prisma";
 import { normalizeCiudad } from "../../utils/normalize-ciudad";
+import { cloudinary } from "../../config/cloudinary";
+import { progressManager } from '../../shared/progress/progress.manager';
+
+// Reexportamos la funci n pdf para mantener retrocompatibilidad o acceso f cil
+export { generateReporteGeneralPdf as generatePdf } from './pdf/pdf-general.service';
 
 export async function dashboard() {
   const [
@@ -152,11 +157,13 @@ export async function reportePorCliente(filters?: {
         where: {
           ...(filters?.choferId || Object.keys(filtroFecha).length > 0
             ? {
-                ruta: {
-                  ...(filters?.choferId ? { choferId: filters.choferId } : {}),
-                  ...(Object.keys(filtroFecha).length > 0 ? { fecha: filtroFecha } : {}),
-                },
-              }
+              ruta: {
+                ...(filters?.choferId ? { choferId: filters.choferId } : {}),
+                ...(Object.keys(filtroFecha).length > 0
+                  ? { fecha: filtroFecha }
+                  : {}),
+              },
+            }
             : {}),
         },
       },
@@ -217,11 +224,11 @@ export async function reportePorChofer(filters?: {
         where: {
           ...(filters?.desde || filters?.hasta
             ? {
-                fecha: {
-                  ...(filters.desde ? { gte: filters.desde } : {}),
-                  ...(filters.hasta ? { lte: filters.hasta } : {}),
-                },
-              }
+              fecha: {
+                ...(filters.desde ? { gte: filters.desde } : {}),
+                ...(filters.hasta ? { lte: filters.hasta } : {}),
+              },
+            }
             : {}),
         },
         include: {
@@ -329,11 +336,13 @@ export async function reportePorFecha(
   const filtroRutaFecha =
     choferId || Object.keys(filtroFecha).length > 0
       ? {
-          ruta: {
-            ...(choferId ? { choferId } : {}),
-            ...(Object.keys(filtroFecha).length > 0 ? { fecha: filtroFecha } : {}),
-          },
-        }
+        ruta: {
+          ...(choferId ? { choferId } : {}),
+          ...(Object.keys(filtroFecha).length > 0
+            ? { fecha: filtroFecha }
+            : {}),
+        },
+      }
       : {};
 
   return prisma.guiaEntrega.findMany({
@@ -371,6 +380,199 @@ export async function reportePorFecha(
   });
 }
 
+export async function getRutasConImagenesFiltradas(filters?: {
+  desde?: string;
+  hasta?: string;
+  clienteId?: string;
+  choferId?: string;
+  tipo?: string;
+  ciudad?: string;
+  filtroGuia?: 'con-guia' | 'sin-guia';
+}) {
+  const ciudadNorm = normalizeCiudad(filters?.ciudad);
+
+  const filtroNumeroGuia =
+    filters?.filtroGuia === 'con-guia'
+      ? { NOT: { numeroGuia: null } }
+      : filters?.filtroGuia === 'sin-guia'
+        ? { numeroGuia: null }
+        : {};
+
+  const filtroFecha = {
+    ...(filters?.desde ? { gte: filters.desde } : {}),
+    ...(filters?.hasta ? { lte: filters.hasta } : {}),
+  };
+
+  const filtroRutaGuia =
+    filters?.choferId || Object.keys(filtroFecha).length > 0
+      ? {
+        ruta: {
+          ...(filters?.choferId ? { choferId: filters.choferId } : {}),
+          ...(Object.keys(filtroFecha).length > 0
+            ? { fecha: filtroFecha }
+            : {}),
+        },
+      }
+      : {};
+
+  const guias = await prisma.guiaEntrega.findMany({
+    where: {
+      ...(filters?.clienteId ? { clienteId: filters.clienteId } : {}),
+      ...filtroRutaGuia,
+      ...(filters?.tipo
+        ? { cliente: { tipo: filters.tipo as 'PRINCIPAL' | 'SECUNDARIO' } }
+        : {}),
+      ...(ciudadNorm
+        ? { cliente: { ciudad: { equals: ciudadNorm, mode: 'insensitive' } } }
+        : {}),
+      ...filtroNumeroGuia,
+    },
+    select: { id: true, rutaId: true },
+  });
+
+  const rutaIds = [...new Set(guias.map((g) => g.rutaId))];
+  const guiaIds = guias.map((g) => g.id);
+
+  if (rutaIds.length === 0) return [];
+
+  const rutas = await prisma.ruta.findMany({
+    where: { id: { in: rutaIds } },
+    include: {
+      chofer: { select: { nombre: true } },
+      fotos: { where: { publicId: { not: null } } },
+      guias: {
+        where: { id: { in: guiaIds } },
+        include: { fotos: { where: { publicId: { not: null } } } },
+      },
+    },
+    orderBy: { fecha: 'desc' },
+  });
+
+  return rutas
+    .map((r) => {
+      const fotoIds: string[] = [
+        ...r.fotos.map((f) => f.id),
+        ...r.guias.flatMap((g) => g.fotos.map((f) => f.id)),
+      ];
+      return {
+        id: r.id,
+        hojaRuta: r.hojaRuta,
+        fecha: r.fecha,
+        chofer: r.chofer.nombre,
+        cantidadImagenes: fotoIds.length,
+        fotoIds,
+      };
+    })
+    .filter((r) => r.cantidadImagenes > 0);
+}
+
+export interface FotoSnapshot {
+  fotoId: string;
+  publicId: string;
+  urlPreview: string;
+  rutaId: string | null;
+  guiaId: string | null;
+}
+
+export interface LiberacionResult {
+  snapshot: FotoSnapshot[];
+  eliminadas: number;
+  errores: number;
+}
+
+export async function liberarImagenesCloudinary(
+  fotoIds: string[],
+  jobId?: string,
+): Promise<LiberacionResult> {
+  const fotos = await prisma.foto.findMany({
+    where: {
+      id: { in: fotoIds },
+      publicId: { not: null },
+    },
+  });
+
+  const snapshot: FotoSnapshot[] = fotos.map((f) => ({
+    fotoId: f.id,
+    publicId: f.publicId as string,
+    urlPreview: f.urlPreview,
+    rutaId: f.rutaId,
+    guiaId: f.guiaId,
+  }));
+
+  let eliminadas = 0;
+  let errores = 0;
+  const total = fotos.length;
+
+  if (jobId) {
+    progressManager.emit(jobId, {
+      step: 'init_delete',
+      message: 'Iniciando liberación de imágenes...',
+      subMessage: `Preparando eliminación de ${total} imágenes`,
+      percent: 0,
+      taskType: 'GENERIC_TASK',
+    });
+  }
+
+  // Determinar frecuencia de emisión SSE para evitar inundar la conexión en volúmenes grandes
+  const emitInterval = total > 50 ? Math.floor(total / 50) : 1;
+
+  for (let i = 0; i < fotos.length; i++) {
+    const foto = fotos[i];
+    if (!foto.publicId) continue;
+
+    const currentItem = i + 1;
+    const isLast = currentItem === total;
+
+    // Emitir progreso dinámico
+    if (jobId && (i % emitInterval === 0 || isLast)) {
+      const currentPercent = Math.floor((currentItem / total) * 100);
+      progressManager.emit(jobId, {
+        step: 'liberando_imagen',
+        message: 'Liberando imágenes (Cloudinary & Base de Datos)...',
+        subMessage: `Imagen ${currentItem} de ${total} (${currentPercent}%)`,
+        current: currentItem,
+        total,
+        percent: currentPercent,
+        taskType: 'GENERIC_TASK',
+      });
+    }
+
+    // Paso 1: Intentar eliminar de Cloudinary
+    let destroyOk = false;
+    try {
+      await cloudinary.uploader.destroy(foto.publicId);
+      destroyOk = true;
+    } catch (e) {
+      console.error(
+        `[Cloudinary] destroy falló para foto ${foto.id} (${foto.publicId}):`,
+        e,
+      );
+      errores++;
+    }
+
+    // Paso 2: Solo si Cloudinary OK, eliminar de la BD
+    if (destroyOk) {
+      try {
+        await prisma.foto.delete({ where: { id: foto.id } });
+        eliminadas++;
+      } catch (e) {
+        console.error(
+          `[BD] delete falló para foto ${foto.id} luego de destroy exitoso:`,
+          e,
+        );
+        errores++;
+      }
+    }
+  }
+
+  if (jobId) {
+    progressManager.complete(jobId, `Liberación completada: ${eliminadas} eliminadas, ${errores} errores`);
+  }
+
+  return { snapshot, eliminadas, errores };
+}
+
+
 export async function reportePorGuia(filters?: {
   desde?: string;
   hasta?: string;
@@ -400,11 +602,13 @@ export async function reportePorGuia(filters?: {
   const filtroRutaGuia =
     filters?.choferId || Object.keys(filtroFecha).length > 0
       ? {
-          ruta: {
-            ...(filters?.choferId ? { choferId: filters.choferId } : {}),
-            ...(Object.keys(filtroFecha).length > 0 ? { fecha: filtroFecha } : {}),
-          },
-        }
+        ruta: {
+          ...(filters?.choferId ? { choferId: filters.choferId } : {}),
+          ...(Object.keys(filtroFecha).length > 0
+            ? { fecha: filtroFecha }
+            : {}),
+        },
+      }
       : {};
 
   return prisma.guiaEntrega.findMany({
