@@ -241,11 +241,15 @@ export const exportPdfImages = async (
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
 
-    await generateExportImagesPdf(res, {
+    const result = await generateExportImagesPdf(res, {
       fotoIds,
       jobId,
       titulo: titulo?.trim(),
     });
+    console.log(
+      `[PDF Export] Completado: ${result.totalImages} imágenes HOJA_RUTA exportadas` +
+      ` de ${fotoIds.length} fotoIds recibidos | Duración: ${(result.durationMs / 1000).toFixed(1)}s`,
+    );
   } catch (e) {
     if (req.query.jobId) {
       progressManager.error(
