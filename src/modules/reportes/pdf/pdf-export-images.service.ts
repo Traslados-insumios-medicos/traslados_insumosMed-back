@@ -1,5 +1,5 @@
 import PDFDocument from 'pdfkit';
-import { prefetchImages } from './image-utils';
+import { fetchImageBuffer } from './image-utils';
 import { progressManager } from '../../../shared/progress/progress.manager';
 import { prisma } from '../../../config/prisma';
 
@@ -63,9 +63,6 @@ function placeImageCentered(
   doc: InstanceType<typeof PDFDocument>,
   buf: Buffer,
 ): void {
-  // PDFKit's `fit` preserves aspect ratio without distortion.
-  // We place the image starting at the top of the content area and
-  // let PDFKit center it within the available box.
   doc.image(buf, MARGIN, HEADER_HEIGHT + MARGIN, {
     fit: [CONTENT_W, CONTENT_H],
     align: 'center',
@@ -93,36 +90,24 @@ export async function generateExportImagesPdf(
     });
   }
 
-  // Build ordered photo list: HOJA_RUTA photos first, then guia photos
-  // grouped by guia in stop order.
+  // Solo incluimos fotos de tipo HOJA_RUTA, ignorando las guías en el PDF
   const fotos = await prisma.foto.findMany({
-    where: { id: { in: fotoIds }, publicId: { not: null } },
+    where: { id: { in: fotoIds }, publicId: { not: null }, tipo: 'HOJA_RUTA' },
     include: {
-      ruta: { select: { id: true, hojaRuta: true, nombre: true, fecha: true, chofer: { select: { nombre: true } } } },
-      guia: {
+      ruta: {
         select: {
           id: true,
-          numeroGuia: true,
-          stop: { select: { orden: true } },
-          ruta: { select: { id: true, hojaRuta: true, nombre: true, fecha: true, chofer: { select: { nombre: true } } } },
+          hojaRuta: true,
+          nombre: true,
+          fecha: true,
+          chofer: { select: { nombre: true } },
         },
       },
     },
   });
 
-  // Separate and sort: HOJA_RUTA photos first, then GUIA grouped by stop order
-  const fotosHojaRuta = fotos.filter((f) => f.tipo === 'HOJA_RUTA');
-  const fotosGuia = fotos
-    .filter((f) => f.tipo === 'GUIA')
-    .sort((a, b) => {
-      const ordenA = a.guia?.stop?.orden ?? 0;
-      const ordenB = b.guia?.stop?.orden ?? 0;
-      if (ordenA !== ordenB) return ordenA - ordenB;
-      return (a.guia?.id ?? '').localeCompare(b.guia?.id ?? '');
-    });
-
   const getRouteRef = (f: (typeof fotos)[number]) => {
-    const r = f.ruta ?? f.guia?.ruta;
+    const r = f.ruta;
     return {
       rutaLabel: r?.hojaRuta || r?.nombre || r?.id?.slice(-6).toUpperCase() || '—',
       fecha: r?.fecha ?? '—',
@@ -130,53 +115,34 @@ export async function generateExportImagesPdf(
     };
   };
 
-  const entries: PhotoEntry[] = [
-    ...fotosHojaRuta.map((f) => ({
-      fotoId: f.id,
-      url: f.urlPreview,
-      label: 'Foto Hoja de Ruta',
-      ...getRouteRef(f),
-    })),
-    ...fotosGuia.map((f) => ({
-      fotoId: f.id,
-      url: f.urlPreview,
-      label: `Foto Guía ${f.guia?.numeroGuia ?? 'Sin número'}`,
-      ...getRouteRef(f),
-    })),
-  ];
+  const entries: PhotoEntry[] = fotos.map((f) => ({
+    fotoId: f.id,
+    url: f.urlPreview,
+    label: 'Foto Hoja de Ruta',
+    ...getRouteRef(f),
+  }));
 
   if (jobId) {
     progressManager.emit(jobId, {
       step: 'process_images',
-      message: 'Descargando imágenes...',
+      message: 'Preparando exportación...',
       subMessage: `${entries.length} imágenes encontradas`,
       percent: 10,
       taskType: 'PDF_EXPORT_IMAGES',
     });
   }
 
-  const allUrls = entries.map((e) => e.url);
-  const imageCache = await prefetchImages(allUrls, 8, (loaded, total) => {
-    if (jobId) {
-      const percent = 10 + Math.floor((loaded / Math.max(total, 1)) * 65);
-      progressManager.emit(jobId, {
-        step: 'download_photos',
-        message: 'Descargando fotografías...',
-        subMessage: `${loaded} / ${total} imágenes`,
-        current: loaded,
-        total,
-        percent,
-        taskType: 'PDF_EXPORT_IMAGES',
-      });
-    }
-  });
-
+  // ─── ESTRATEGIA: descarga on-demand, una imagen a la vez ──────────────────
+  // A diferencia de prefetchImages (que carga todo en RAM antes de construir
+  // el PDF), aquí descargamos cada imagen justo antes de renderizarla y la
+  // dejamos caer fuera de scope al terminar la página, liberando la RAM.
+  // Esto permite procesar miles de imágenes sin agotar el heap.
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: 'A4',
       margin: 0,
       autoFirstPage: false,
-      bufferPages: false,
+      bufferPages: false,  // CRÍTICO: false = streaming real, sin acumular páginas en RAM
       info: { Title: titulo, Author: 'LOGISTRANS S.A.' },
     });
 
@@ -201,7 +167,10 @@ export async function generateExportImagesPdf(
         } else {
           for (let i = 0; i < entries.length; i++) {
             const entry = entries[i];
-            const imgBuf = imageCache.get(entry.url);
+
+            // Descarga on-demand: el buffer existe solo durante esta iteración
+            // y puede ser recolectado por el GC al pasar a la siguiente.
+            const imgBuf = await fetchImageBuffer(entry.url);
 
             doc.addPage();
             drawPageHeader(doc, titulo, entry);
@@ -230,10 +199,10 @@ export async function generateExportImagesPdf(
                 });
             }
 
+            // Emitir progreso SSE cada 5 imágenes o en la última
             if (jobId && (i % 5 === 0 || i === entries.length - 1)) {
               const rendered = i + 1;
-              const percent =
-                75 + Math.floor((rendered / Math.max(entries.length, 1)) * 24);
+              const percent = 10 + Math.floor((rendered / Math.max(entries.length, 1)) * 89);
               progressManager.emit(jobId, {
                 step: 'render_pdf',
                 message: 'Construyendo documento PDF...',
